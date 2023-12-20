@@ -1,0 +1,6 @@
+node_modules
+dist
+captcha
+image
+config.json
+sync.js
