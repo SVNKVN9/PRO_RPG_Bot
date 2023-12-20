@@ -15,7 +15,7 @@ interface BaseVar {
     MDm: number;
     MRm: number;
     WE: number;
-    DM: number;
+    DMP: number;
     AMP: number;
     Tx: number;
     ACC: number;
@@ -71,6 +71,7 @@ interface CalReturn extends BaseVar {
     WE1: number
 
     AM: number
+    DM: number
     ATT: number
 
     SMS: number
@@ -92,7 +93,7 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
         MDm: 0,
         MRm: 0,
         WE: 0,
-        DM: 0,
+        DMP: 0,
         AMP: 0,
         Tx: 0,
         ACC: 0,
@@ -153,7 +154,7 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
         if (Passive.MDm) variable.MDm += parseFloat(Passive.MDm) * QualityResult;
         if (Passive.MRm) variable.MRm += parseFloat(Passive.MRm) * QualityResult;
         if (Passive.WE) variable.WE += parseFloat(Passive.WE) * QualityResult;
-        if (Passive.DM) variable.DM += parseFloat(Passive.DM) * QualityResult;
+        if (Passive.DM) variable.DMP += parseFloat(Passive.DM) * QualityResult;
         if (Passive.AM) variable.AMP += parseFloat(Passive.AM) * QualityResult;
         if (Passive.Tx) variable.Tx += parseFloat(Passive.Tx) * QualityResult;
         if (Passive.ACC) variable.ACC += parseFloat(Passive.ACC) * QualityResult;
@@ -224,9 +225,11 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
 
     if (!user.stats.END) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.END': 0 } })
     if (!user.stats.HEA) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.HEA': { value: 100, UpdateLast: Date.now() } } })
+    if (!user.stats.STR) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.STR': 0 } })
 
     const END = user.stats.END ? user.stats.END : 0
     const HEA = user.stats.HEA ? user.stats.HEA.value : 100
+    const STR = user.stats.STR ? user.stats.STR : 0
 
     let HPMax = parseFloat(level.HPL) + variable.HPM + ((parseFloat(level.HPL) / 100) * (variable.HM_p + (0.03 * END)))
     let HP_p = (user.stats.HP.value / HPMax) * 100
@@ -246,12 +249,14 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
     const HPT = (HPMax / 100) * (HPR / 1440)
     const MPT = (MPMax / 100) * (MPR / 1440)
 
-    const DM = variable.DM + ((parseFloat(level.DML) / 100 * HEA) / 100 * variable.DM_p)
-    const AM = variable.AMP + ((parseFloat(level.AML) / 100 * HEA) / 100 * variable.AM_p)
+    const DM_HEA = (parseFloat(level.DML) / 100 * HEA)
+    const DM = variable.DMP + DM_HEA + (DM_HEA / 100 * (variable.DM_p + (0.1 * STR)))
+
+    const AM_HEA = (parseFloat(level.AML) / 100 * HEA)
+    const AM = variable.AMP + AM_HEA + (AM_HEA / 100 * variable.AM_p)
 
     let WEI = WE1 + variable.WE
     if (WEI <= 0) WEI = 0
-
 
     let IMM = (variable.IMM / 100) * HEA
 
@@ -280,7 +285,7 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
     let CP = (variable.CP + parseFloat(level.CPL))
 
     return {
-        ...variable, DM, AM, ATT,
+        ...variable, AM, DM, ATT,
         APH, APW, CP,
         HPMax, HP_p, HPR, MPMax, MP_p, MPR, HPT, MPT,
         WEI, WE1, IMM, ACC, EVA, ATS, MOS, SMS

@@ -7,13 +7,13 @@ export default {
     execute: async (client: Client, message: Message, args: string[]) => {
         if (!client.config.OnwerIds.includes(message.author.id)) return
 
-        if (!args.length) return message.reply({ content: '<Prefix>give <ItemId> <Member> <quantity> ' })
+        if (!args.length) return message.reply({ content: '<Prefix>give <ItemId> <quantity> <Member>' })
 
         let msg = await message.channel.send({ content: '**โปรดรอ...**' })
 
-        let ItemId = args[0]
-        let UserId = args[1] ?? message.author.id
-        let quantity = args[2] || '1' // quantity
+        const ItemId = args[0]
+        const quantity = args[1] || '1' // quantity
+        const UserId = args[2] ?? message.author.id
 
         const isUser = await client.Database.Users.findOne({ UserId: UserId })
 

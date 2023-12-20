@@ -429,6 +429,7 @@ export default class Pages {
             Tx, EP_p, APH, APW, EPH, EPW,
             HPMax, HP_p, HPM, HM_p, HPR, HDm, HRm, HD_p, HR_p, HPT,
             MPMax, MP_p, MPM, MM_p, MPR, MDm, MRm, MD_p, MR_p, MPT,
+            DM, DMP, DM_p,
             AM, AMP, AM_p,
             WEI, WE, WE1,
             IMM, PoR, IPR, MaR, MaD, ACC, EVA, ATS, ATT, MOS, SMS, REF, VIS, INS, SCR, ICR,
@@ -530,12 +531,21 @@ export default class Pages {
                     ].join('\n'))
                 },
                 {
+                    name: '👊🏻 ข้อมูลพลังโจมตีหลัก',
+                    value: codeBlock('js', [
+                        `45. DM : ${DM}`,
+                        `46. DML : ${NumberWithCommas(parseInt(this.Level.DML))}`,
+                        `47. DMP : ${DMP}`,
+                        `48. DM% : ${DM_p}%`
+                    ].join('\n'))
+                },
+                {
                     name: '🛡 ข้อมูลพลังป้องกันกายภาพภายนอก',
                     value: codeBlock('js', [
-                        `45. AM  : ${AM}`,
-                        `46. AML : ${NumberWithCommas(parseInt(this.Level.AML))}`,
-                        `47. AMP : ${AMP}`,
-                        `48. AM% : ${AM_p}%`
+                        `49. AM  : ${AM}`,
+                        `50. AML : ${NumberWithCommas(parseInt(this.Level.AML))}`,
+                        `51. AMP : ${AMP}`,
+                        `52. AM% : ${AM_p}%`
                     ].join('\n'))
                 },
                 {

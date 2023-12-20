@@ -13,7 +13,7 @@ export const StatusEmbed = async (client: Client, User: IUser, HGD: number, HGF:
         .addFields(
             {
                 name: 'Status',
-                value: `${codeBlock('js', `🩺สุขภาพ HEA ${PrograssBar(User.stats.HEA.value)}${User.stats.HEA.value}%`)}${codeBlock('js', `🍱ความหิวอาหาร    HGF : ${minToTime(HGD)} ${HGD  == 0 ? '🔴' : '🟢'}\n🍹ความหิวเครื่องดื่ม  HGD : ${minToTime(HGF)} ${HGF  == 0 ? '🔴' : '🟢'}`)}`
+                value: `${codeBlock('js', `🩺สุขภาพ         HEA : ${User.stats.HEA.value}%\n🍱ความหิวอาหาร    HGD : ${minToTime(HGD)} ${HGD  == 0 ? '🔴' : '🟢'}\n🍹ความหิวเครื่องดื่ม  HGF : ${minToTime(HGF)} ${HGF  == 0 ? '🔴' : '🟢'}`)}`
             },
             {
                 name: '📑 สเตตัสทั้งหมด',

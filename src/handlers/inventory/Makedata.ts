@@ -20,7 +20,7 @@ export const MakeData = async (client: Client, Inventory: ItemBase[]): Promise<I
     groups.sort((a, b) => a.Index - b.Index)
 
     const ItemCache = new Map<string, any>()
-    
+
     for(let item of Inventory.filter(Item => !Item.Select)) {
         let isMap = ItemCache.get(item.ItemId)
 

@@ -5,6 +5,7 @@ import Guild from "./Database/Guild";
 import Client from "./Client";
 import HTTPClient, { APIRoutes } from "../Utils/HTTPClient";
 import { TypeAB, TypeB, TypeF, TypeP, TypePA, TypePD } from "../types";
+import e from "cors";
 
 export default class Database {
     public connection!: Db
@@ -58,7 +59,8 @@ export default class Database {
         this.connection = await this.connect()
         this.getCollections()
 
-        this.SaveLogging()
+        this.SavingLog()
+        this.DeleteLog()
     }
 
     private async connect() {
@@ -74,14 +76,14 @@ export default class Database {
         return client.db(this.DBName)
     }
 
-    public async Items (ItemId?: string): Promise<TypeAB | TypeB | TypePA | TypeP | TypePD | TypeF | undefined> {
+    public async Items(ItemId?: string): Promise<TypeAB | TypeB | TypePA | TypeP | TypePD | TypeF | undefined> {
         return await this.HTTPClient.request('GET', APIRoutes.FetchItems(ItemId))
     }
 
-    public async Groups (GroupId?: string): Promise<{ Id: string, Name: string, Index: number }[]> {
+    public async Groups(GroupId?: string): Promise<{ Id: string, Name: string, Index: number }[]> {
         return await this.HTTPClient.request('GET', APIRoutes.FetchGroups(GroupId))
     }
-    
+
     private getCollections() {
         const { connection } = this
 
@@ -118,19 +120,21 @@ export default class Database {
     private onCommandStarted(event: CommandStartedEvent) {
         if (event.command.find == 'query-logging') return
         if (event.command.insert == 'query-logging') return
+        if (event.command.delete == 'query-logging') return
         if (event.commandName == 'find') return
 
         // 2629800000
         this.QueueLog.push({
-            query: event,
-            successed: false,
+            databaseName: event.databaseName,
+            commandName: event.commandName,
+            command: event.command,
+            requestId: event.requestId,
             createdAt: new Date(),
-            expireAt: new Date(Date.now() + 10_000)
         })
     }
 
     private onCommandSucceeded(event: CommandSucceededEvent) {
-        const index = this.QueueLog.findIndex((value) => value.query.requestId == event.requestId)
+        const index = this.QueueLog.findIndex((value) => value.requestId == event.requestId)
 
         if (index == -1) return
 
@@ -138,7 +142,21 @@ export default class Database {
         this.QueueLog[index].successedAt = new Date()
     }
 
-    private async SaveLogging() {
+    private SavingLog() {
+        setInterval(async () => {
+            if (!this.QueueLog.length) return
+
+            const insert = this.QueueLog.filter(value => value.successed)
+
+            this.QueueLog = this.QueueLog.filter(value => !value.successed)
+
+            if (!insert.length) return
+
+            this.QueryLogging.insertMany(insert)
+        }, 5_000)
+    }
+
+    private async DeleteLog() {
         setInterval(async () => {
             this.QueryLogging.deleteMany({ successedAt: { $lte: new Date(Date.now() - 2_592_000_000) } })
 
@@ -151,6 +169,6 @@ export default class Database {
             if (!insert.length) return
 
             this.QueryLogging.insertMany(insert)
-        }, 20_000)
+        }, 60_000)
     }
 }

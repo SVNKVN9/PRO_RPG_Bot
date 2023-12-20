@@ -42,8 +42,8 @@ export default class Utils {
                 'stats.HGD.value': HGD,
                 'stats.HGF.UpdateLast': now,
                 'stats.HGD.UpdateLast': now,
-                'stats.HEA.value': HEA,
-                'stats.HEA.UpdateLast': now
+                // 'stats.HEA.value': HEA,
+                // 'stats.HEA.UpdateLast': now
             }
         })
 

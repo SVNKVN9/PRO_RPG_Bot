@@ -554,25 +554,19 @@ export default class {
 
                 if (ItemTargetPos == EquipPos.CultivationTechnique.type || ItemTargetPos == EquipPos.CultivationEnhancement.type) {
 
-                    const removeList = isItems.filter(async (ItemEquip) => {
-                        const EquipType = this.FindEquipPos(await this.client.Database.Items(ItemEquip.ItemId) as ItemsType)
+                    await Promise.all(isItems.map(async (ItemBase) => {
+                        const Item = await this.client.Database.Items(ItemBase.ItemId) as ItemsType
+                        const EquipType = this.FindEquipPos(Item)
 
-                        if (EquipType == ItemTargetPos) return ItemEquip
-                    })
+                        console.log('Checking', EquipType, ItemTargetPos)
 
-                    await Promise.all(removeList.map(async (Item) => await this.client.Database.Equips.deleteOne({ UserId, ItemId: Item.ItemId })))
+                        if (EquipType != ItemTargetPos) return false
+
+                        console.log('Delete', EquipType, ItemTargetPos)
+
+                        await this.client.Database.Equips.deleteOne({ UserId, ItemId: ItemBase.ItemId })
+                    }))
                 }
-                // if ((Passive.EquipPos == EquipPos.CultivationTechnique.type) || (Passive.EquipPos == EquipPos.CultivationEnhancement.type)) {
-                //     const Status = await this.CultivationChecker(
-                //         interaction,
-                //         Passive.EquipPos == EquipPos.CultivationTechnique.type ? 'CultivationTechnique' : 'CultivationEnhancement',
-                //         ItemTarget,
-                //         SD ? SD : Timeout,
-                //         isItems
-                //     )
-
-                //     if (Status.isEnd) return Status
-                // }
 
                 if (Passive.EquipType == 'OverLap') {
                     await this.client.Database.Equips.deleteMany({ UserId, ItemId: ItemTarget.ItemId })
@@ -651,7 +645,7 @@ export default class {
 
             if (awaitComponent.customId == 'deline') return { isEnd: true, message: { components: [], content: '', embeds: [{ description: '✅ยกเลิกการสวมใส่แทนทับ' }] } }
 
-            interaction.editReply({ components: [] })
+            await interaction.editReply({ components: [] })
 
             return { isEnd: false }
         } catch (err) {
@@ -836,6 +830,7 @@ export default class {
     async DecreaseAttriute(ItemTarget: ItemBase, Item: TypeAB | TypeP | TypePA) {
         try {
             let Quality = 0
+
             if (Item.Quality.Enable && Item.ConditionItem.Deterioration) {
                 if (!ItemTarget.Quality) Quality = parseInt(Item.Quality.Quality ?? '0')
                 else Quality = ItemTarget.Quality

@@ -122,7 +122,7 @@ export default async (client: Client, interaction: ButtonInteraction, Select: It
             AcceptCheck: ActionInteraction.values[0] == 'accept',
         })
 
-        await client.Database.Inventorys.updateOne({ UserId, ItemId, ItemDate, ItemCount }, { $set: { Select: true, Locked: false } })
+        await client.Database.Inventorys.updateOne({ UserId, ItemId, ItemDate, ItemCount }, { $set: { Select: false, Locked: false } })
 
         if (result.message) return interaction.editReply(result.message)
     } catch (err) {
