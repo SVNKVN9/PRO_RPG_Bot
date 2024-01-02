@@ -33,9 +33,13 @@ export default async ({ client, Member, ItemTarget, interaction, Target, AcceptC
 
         Quality = IQ
 
-        let Passive = await client.Executer.Passive(interaction, Target.user.id, ItemTarget, Item.Extend.PassiveTarget, Quality, !AcceptCheck)
+        let PassiveMe = await client.Executer.Passive(interaction, Member.user.id, ItemTarget, Item.Extend.PassiveMe, Quality)
 
-        if (Passive.isEnd) return Passive
+        if (PassiveMe.isEnd) return PassiveMe
+
+        let PassiveTarget = await client.Executer.Passive(interaction, Target.user.id, ItemTarget, Item.Extend.PassiveTarget, Quality, !AcceptCheck)
+
+        if (PassiveTarget.isEnd) return PassiveTarget
 
         await client.Executer.Activate(target, Member, Item.Extend.Activate)
     }

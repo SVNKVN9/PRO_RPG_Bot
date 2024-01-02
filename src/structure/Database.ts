@@ -1,11 +1,10 @@
-import { MongoClient, Db, Collection, CommandFailedEvent, CommandStartedEvent, CommandSucceededEvent } from "mongodb";
+import { MongoClient, Db, Collection, CommandStartedEvent, CommandSucceededEvent } from "mongodb";
 import User from "./Database/User";
 import Inventory from "./Database/Inventory";
 import Guild from "./Database/Guild";
 import Client from "./Client";
 import HTTPClient, { APIRoutes } from "../Utils/HTTPClient";
 import { TypeAB, TypeB, TypeF, TypeP, TypePA, TypePD } from "../types";
-import e from "cors";
 
 export default class Database {
     public connection!: Db
@@ -18,7 +17,8 @@ export default class Database {
     public Buttons!: Collection
     public BirthPoint!: Collection
     public Cooldowns!: Collection
-    public CooldownUse!: Collection
+    public Effect!: Collection
+    // public CooldownUse!: Collection
     // public Groups!: Collection
     // public Items!: Collection
     public Invites!: Collection
@@ -90,7 +90,8 @@ export default class Database {
         this.Buttons = connection.collection('buttons')
         this.BirthPoint = connection.collection('birth-points')
         this.Cooldowns = connection.collection('cooldowns')
-        this.CooldownUse = connection.collection('cooldown-use')
+        this.Effect = connection.collection('effects')
+        // this.CooldownUse = connection.collection('cooldown-use')
         // this.Groups = connection.collection('groups')
         // this.Items = connection.collection('items')
         // this.Items = this.HTTPClient.request(APIRoutes.FetchItems())

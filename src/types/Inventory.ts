@@ -4,7 +4,6 @@ export interface ItemBase {
     _id: ObjectId
     UserId: string
     ItemId: string 
-    // ItemId: ObjectId
     ItemDate: string
     ItemCount: number
     CreateTimestramp: number

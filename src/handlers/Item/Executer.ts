@@ -157,11 +157,12 @@ export default class {
 
     async ConditionOpenItem(user: IUser, member: GuildMember, item: ItemsType, ConditionItem: ConditionItem, interaction: CommandInteraction, Target?: GuildMember | undefined, AcceptCheck?: boolean): Promise<StatusType> {
         try {
+            if (!Target) {
+                const EquipLimit = await this.EquipLimitChecker(interaction, member.id, item)
 
-            const EquipLimit = await this.EquipLimitChecker(interaction, member.id, item)
-
-            if (EquipLimit.isEnd) return EquipLimit
-
+                if (EquipLimit.isEnd) return EquipLimit
+            }
+            
             const Base: IBase = item.Base
 
             let { PeriodUseMessage, PreparationPeriodMessage, FinishMessage } = ConditionItem
@@ -419,7 +420,7 @@ export default class {
             }
 
             if (ConditionItem.Cooldown) {
-                if (!Target) {
+                if (!Target || !AcceptCheck) {
                     await this.setCooldown(ConditionItem.Cooldown, user.UserId, Base.ItemId)
                 } else {
                     await this.setCooldown(ConditionItem.Cooldown, Target.user.id, Base.ItemId)
@@ -525,20 +526,20 @@ export default class {
 
             const Timeout = Date.now() + (parseInt(day) * ToDay) + (parseInt(hour) * ToHour) + (parseInt(min) * ToMin) + (parseInt(sec) * ToSec)
 
-            const isItems: ItemEquip[] = await this.client.Database.Equips.find({ UserId }).toArray() as any
+            const isItems: ItemEquip[] = await this.client.Database.Effect.find({ UserId }).toArray() as any
 
             const SD = isSD ? (Timeout / 100) * Quality : Quality
 
             const insertItem = async () => {
-                this.client.guilds.cache.forEach(async (guild) => {
-                    try {
-                        const member = guild.members.cache.get(UserId) || await guild.members.fetch(UserId)
+                // this.client.guilds.cache.forEach(async (guild) => {
+                //     try {
+                //         const member = guild.members.cache.get(UserId) || await guild.members.fetch(UserId)
 
-                        if (!member) return
-                    } catch { }
-                })
+                //         if (!member) return
+                //     } catch { }
+                // })
 
-                await this.client.Database.Equips.insertOne({
+                await this.client.Database.Effect.insertOne({
                     UserId: UserId,
                     ItemCount: ItemTarget.ItemCount,
                     ItemDate: ItemTarget.ItemDate,
@@ -560,16 +561,16 @@ export default class {
 
                         console.log('Checking', EquipType, ItemTargetPos)
 
-                        if (EquipType != ItemTargetPos) return false
+                        if (EquipType != ItemTargetPos) return
 
                         console.log('Delete', EquipType, ItemTargetPos)
 
-                        await this.client.Database.Equips.deleteOne({ UserId, ItemId: ItemBase.ItemId })
+                        await this.client.Database.Effect.deleteOne({ UserId, ItemId: ItemBase.ItemId })
                     }))
                 }
 
                 if (Passive.EquipType == 'OverLap') {
-                    await this.client.Database.Equips.deleteMany({ UserId, ItemId: ItemTarget.ItemId })
+                    await this.client.Database.Effect.deleteMany({ UserId, ItemId: ItemTarget.ItemId })
 
                     await insertItem()
                 } else if (Passive.EquipType == 'Stack') {
@@ -590,27 +591,9 @@ export default class {
         }
     }
 
-    // async CultivationChecker(interaction: CommandInteraction, type: 'CultivationTechnique' | 'CultivationEnhancement', ItemTarget: ItemBase, TimeOut: number, isItems: ItemBase[]): Promise<StatusType> {
     async CultivationChecker(interaction: CommandInteraction, type: 'CultivationTechnique' | 'CultivationEnhancement', UserId: string, Item: ItemsType): Promise<StatusType> {
         try {
             const ItemNameFormat = (Item: ItemsType) => `${Item.Base.ItemId} ${Item.Base.EmojiId ? Item.Base.EmojiId : ''} ${Item.Base.ItemName}`
-
-            // const Items = (await Promise.all(
-            //     isItems.map(async (Item) => await this.client.Database.Items(Item.ItemId))
-            // )).map((Item) => ({
-            //     ItemId: Item?.Base.ItemId,
-            //     ItemName: ItemNameFormat(Item as ItemsType),
-            //     EquipPos: ((Item as TypePA).PassiveTarget || {}).EquipPos
-            // }))
-
-            // const oldItem = Items.filter((Item) => type == 'CultivationTechnique' ?
-            //     Item.EquipPos == EquipPos.CultivationTechnique.type :
-            //     Item.EquipPos == EquipPos.CultivationEnhancement.type
-            // )
-
-            // if (!oldItem.length) return { isEnd: false }
-
-            // const Item = await this.client.Database.Items(ItemTarget.ItemId)
 
             const Embed = new EmbedBuilder()
                 .setTitle(`❗ คุณมีไอเทม ${type == 'CultivationTechnique' ? ' 📚 ตำราเทคนิคการบ่มเพาะพลัง' : '💊 โอสถบ่มเพาะพลัง'} ที่กำลังเรียนรู้อยู่แล้ว ยืนยันว่า คุณต้องการใช้ทับแทนที่${type == 'CultivationTechnique' ? 'ตำราเล่มเก่า' : 'โอสถตัวเก่า'} หรือไม่`)

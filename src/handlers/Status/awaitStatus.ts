@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, Message, StringSelectMenuBuilder, StringSelectMenuInteraction } from "discord.js";
+import { ActionRowBuilder, ButtonInteraction, Message, StringSelectMenuBuilder, StringSelectMenuInteraction } from "discord.js";
 import Client from "../../structure/Client";
 import { ButtonStats, SecondRow, SelectStats, StatusEmbed, StatusSelectMenu } from "./Rander";
 import { ICooldown, ILevel, IUser, ItemEquip, TypeAB, TypeB, TypeP, TypePA, TypePD } from "../../types";
@@ -18,9 +18,10 @@ export default async (client: Client, interaction: ButtonInteraction | StringSel
         const Level: ILevel = await client.Database.Level.findOne({ LevelNo: User.stats.level.toString() }) as any
 
         const Equips: ItemEquip[] = await client.Database.Equips.find({ UserId: UserId }).toArray() as any
-        const Cooldowns = await client.Database.CooldownUse.find({ UserId: UserId }).toArray() as any as ICooldown[]
+        const Effects: ItemEquip[] = await client.Database.Effect.find({ UserId: UserId }).toArray() as any
+        const Cooldowns = await client.Database.Cooldowns.find({ UserId: UserId }).toArray() as any as ICooldown[]
 
-        const Page = new Pages(User, Level, Equips, Cooldowns, client, interaction, parseInt(PageNo))
+        const Page = new Pages(User, Level, Equips, Effects, Cooldowns, client, interaction, parseInt(PageNo))
 
         const message = await Page.Render()
 

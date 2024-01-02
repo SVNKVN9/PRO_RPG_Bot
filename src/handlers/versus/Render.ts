@@ -6,6 +6,7 @@ import { ICooldown, ILevel, IUser, ItemEquip, TypeAB, TypeB, TypeP, TypePA, Type
 
 export default class {
     private UserTarget?: string
+    private SelectAttackType?: string
 
     constructor(private client: Client, private UserId: string, private interaction: CommandInteraction) {
 
@@ -18,9 +19,10 @@ export default class {
     private async UserRender() {
         const User = await this.client.Database.Users.findOne({ UserId: this.UserId }) as IUser
         const Level = await this.client.Database.Level.findOne({ LevelNo: User.stats.level.toString() }) as any as ILevel
-        const { HP_p, MP_p } = await Calculator(this.client, User, Level)
+        const { HPMax, MPMax, HPR, MPR, HP_p: HPP, MP_p: MPP } = await Calculator(this.client, User, Level)
+        const { HP, HP_p, MP, MP_p } = await this.client.Utils.UpdateHP_MP(null, User, HPMax, MPMax, HPR, MPR, HPP, MPP)
 
-        let HPName = PrograssBar(HP_p) 
+        let HPName = PrograssBar(HP_p)
         let MPName = ''
 
         if (MP_p >= 99) MPName = '🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦'
@@ -35,15 +37,14 @@ export default class {
         else if (MP_p >= 10) MPName = '🟦'
         else MPName = ''
 
-        return `${codeBlock(`${Level.LevelName}\n╭ HP🩸${HPName}${HP_p}%\n╰ HP🩸${NumberWithCommas(User.stats.HP.value)}\n╭ MP✨${MPName}${MP_p}%\n╰ MP✨${NumberWithCommas(User.stats.MP.value)}\n`)}`
+        return `${codeBlock(`${Level.LevelName}\n╭ HP🩸${HPName}${HP_p}%\n╰ HP🩸${NumberWithCommas(HP)}\n╭ MP✨${MPName}${MP_p}%\n╰ MP✨${NumberWithCommas(MP)}\n`)}`
     }
 
     private async TargetRender(Embed: EmbedBuilder, Escape: Collection<string, number>) {
-        const User = await this.client.Database.Users.findOne({ UserId: this.UserId }) as IUser
+        // const User = await this.client.Database.Users.findOne({ UserId: this.UserId }) as IUser
         const Member = await this.interaction.guild?.members.fetch(this.UserId)
 
-        const members = Member?.voice.channel?.members.toJSON()
-            .filter(member => member.id != Member?.voice.member?.id) as GuildMember[]
+        const members = Member?.voice.channel?.members.toJSON() as GuildMember[]
 
         const Escapes = (await Promise.all(Escape.map(async (leaveAt, UserId) => {
             const Target = await this.client.Database.Users.findOne({ UserId }) as IUser
@@ -76,26 +77,26 @@ export default class {
         return { members }
     }
 
-    private async ItemsFinder(CustomType?: string) {
+    private async ItemsFinder() {
         const Equips: ItemEquip[] = await this.client.Database.Equips.find({ UserId: this.UserId }).toArray() as any
-        const cooldown = await this.client.Database.CooldownUse.find({ UserId: this.UserId }).toArray() as any as ICooldown[]
+        const cooldown = await this.client.Database.Cooldowns.find({ UserId: this.UserId }).toArray() as any as ICooldown[]
         const now = Date.now()
 
         const Items = await Promise.all(Equips.map(async Equip => ({
             Item: await this.client.Database.Items(Equip.ItemId), Equip
         })))
 
-        const EquipFinder = async (EquipPos: EquipPos) => {
+        const EquipFinder = async (EquipPos: string) => {
             const Result: string[] = []
 
             const ItemFilter = Items.filter(({ Item, Equip }) => {
                 const PassiveMe = (Item as TypeAB | TypeB).PassiveMe
 
-                if (PassiveMe && PassiveMe.EquipPos == EquipPos.type) return true
+                if (PassiveMe && PassiveMe.EquipPos == EquipPos) return true
 
                 const PassiveTarget = (Item as TypePA | TypeP | TypePD).PassiveTarget
 
-                if (PassiveTarget && PassiveTarget.EquipPos == EquipPos.type) return true
+                if (PassiveTarget && PassiveTarget.EquipPos == EquipPos) return true
 
                 return false
             })
@@ -105,9 +106,16 @@ export default class {
 
                 if (!Item) continue
 
-                const CD = cooldown.find(c => c.ItemId == Item.Base.ItemId)
-                const CooldownStatus = CD ? CD.Timeout < now ? `\`❌\`` : `\`✅\`` : `\`✅\``
-                const CooldownTime = CD ? CD.Timeout < now ? `⌛<t:${Math.round((Date.now() / 1000) + (CD.Timeout / 1000))}:R>` : `` : ``
+                let CD = cooldown.find(c => c.ItemId == Item.Base.ItemId)
+
+                if (CD && CD.TimeOut < now) {
+                    await this.client.Database.Cooldowns.deleteOne({ UserId: this.UserId, ItemId: Item.Base.ItemId })
+                    
+                    CD = undefined
+                }
+
+                const CooldownStatus = CD ? CD.TimeOut < now ? `\`❌\`` : `\`✅\`` : `\`✅\``
+                const CooldownTime = CD ? CD.TimeOut < now ? `⌛<t:${Math.round((Date.now() / 1000) + (CD.TimeOut / 1000))}:R>` : `` : ``
                 const NameFormat = `${CooldownStatus}${Item.Base.ItemId} ${Item.Base.EmojiId ? Item.Base.EmojiId : ''} ${Item.Base.ItemName}${CooldownTime}`
 
                 Result.push(NameFormat)
@@ -122,23 +130,17 @@ export default class {
             }
         }
 
-        const GeneralTips = await EquipFinder(EquipPos.GeneralTips)
-        const ItemUse = await EquipFinder(EquipPos.ItemUse)
-        const MainWeapon = await EquipFinder(EquipPos.MainWeapon)
-        const SecretWeapon = await EquipFinder(EquipPos.SecretWeapon)
-        const Wing = await EquipFinder(EquipPos.Wing)
-        const ItemTransfrom = await EquipFinder(EquipPos.ItemTransFrom)
-        const Armor = await EquipFinder(EquipPos.Armor)
+        const GeneralTips = await EquipFinder(EquipPos.GeneralTips.type)
+        const ItemUse = await EquipFinder(EquipPos.ItemUse.type)
+        const MainWeapon = await EquipFinder(EquipPos.MainWeapon.type)
+        const SecretWeapon = await EquipFinder(EquipPos.SecretWeapon.type)
+        const Wing = await EquipFinder(EquipPos.Wing.type)
+        const ItemTransfrom = await EquipFinder(EquipPos.ItemTransFrom.type)
+        const Armor = await EquipFinder(EquipPos.Armor.type)
 
-        if (CustomType) {
-            for (let key in EquipPos) {
-                console.log((EquipPos as any)[key].type)
-            }
-        }
+        const Custom = this.SelectAttackType ? await EquipFinder(this.SelectAttackType) : undefined
 
-        // const Custom = await EquipFinder()
-
-        return { GeneralTips, ItemUse, MainWeapon, SecretWeapon, Wing, ItemTransfrom, Armor, Custom: undefined }
+        return { GeneralTips, ItemUse, MainWeapon, SecretWeapon, Wing, ItemTransfrom, Armor, Custom }
     }
 
     RenderSelectUser(members: GuildMember[]) {
@@ -152,7 +154,7 @@ export default class {
                     members.length === 0
                         ? [{ label: 'NONE', value: 'NONE' }]
                         : members.map((member) => ({
-                            label: this.UserTarget === member.id ? `${member.user.username} กำลังเลือก` : member.user.username,
+                            label: this.UserTarget === member.id ? `${member.nickname} กำลังเลือก` : `${member.nickname}`,
                             value: member.id
                         }))
                 )
@@ -160,7 +162,7 @@ export default class {
     }
 
     async Display(Escape: Collection<string, number>) {
-        const { GeneralTips, ItemUse, MainWeapon, SecretWeapon, Wing, ItemTransfrom, Armor } = await this.ItemsFinder()
+        const { GeneralTips, ItemUse, MainWeapon, SecretWeapon, Wing, ItemTransfrom, Armor, Custom } = await this.ItemsFinder()
         const Embed = new EmbedBuilder()
             .setTitle(`⚔️VS ต่อสู้🏹`)
             .setDescription(`${await this.UserRender()}`)
@@ -217,21 +219,55 @@ export default class {
             }
         }
 
-        createSelectMenu('💥 เลือกวรยุทธ์ที่ต้องการใช้', GeneralTips.Items);
-        createSelectMenu('🃏 เลือกไอเทมพิเศษที่ต้องการใช้', ItemUse.Items);
-        createSelectMenu('⚔️ เลือกอาวุธหลักที่ต้องการใช้', MainWeapon.Items);
-        createSelectMenu('🗡️ เลือกอาวุธรองที่ต้องการใช้', SecretWeapon.Items);
-        createSelectMenu('🦋 เลือกปีกบินที่ต้องการใช้', Wing.Items);
-        createSelectMenu('👿 เลือกจิตรอสูรที่ต้องการใช้', ItemTransfrom.Items);
+        if (Custom) {
+            let title = 'เลือกอาวุธที่ต้องการใช้'
+            switch (this.SelectAttackType) {
+                case EquipPos.GeneralTips.type:
+                    title = '💥 เลือกวรยุทธ์ที่ต้องการใช้';
+                    break;
+                case EquipPos.ItemUse.type:
+                    title = '🃏 เลือกไอเทมพิเศษที่ต้องการใช้';
+                    break;
+                case EquipPos.MainWeapon.type:
+                    title = '⚔️ เลือกอาวุธหลักที่ต้องการใช้';
+                    break;
+                case EquipPos.SecretWeapon.type:
+                    title = '🗡️ เลือกอาวุธรองที่ต้องการใช้';
+                    break;
+                case EquipPos.Wing.type:
+                    title = '🦋 เลือกปีกบินที่ต้องการใช้';
+                    break;
+                case EquipPos.ItemTransFrom.type:
+                    title = '👿 เลือกจิตรอสูรที่ต้องการใช้';
+                    break;
+            }
+
+            createSelectMenu(title, Custom.Items);
+
+            components.push(
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('กลับหน้าหลัก')
+                        .setStyle(ButtonStyle.Primary)
+                        .setCustomId('attack-back')
+                )
+            )
+        } else {
+            createSelectMenu('💥 เลือกวรยุทธ์ที่ต้องการใช้', GeneralTips.Items);
+            createSelectMenu('🃏 เลือกไอเทมพิเศษที่ต้องการใช้', ItemUse.Items);
+            createSelectMenu('⚔️ เลือกอาวุธหลักที่ต้องการใช้', MainWeapon.Items);
+            createSelectMenu('🗡️ เลือกอาวุธรองที่ต้องการใช้', SecretWeapon.Items);
+            createSelectMenu('🦋 เลือกปีกบินที่ต้องการใช้', Wing.Items);
+            createSelectMenu('👿 เลือกจิตรอสูรที่ต้องการใช้', ItemTransfrom.Items);
+        }
 
         const Buttons = [
             new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
                     new ButtonBuilder()
                         .setLabel('👊')
-                        .setDisabled(true)
                         .setStyle(ButtonStyle.Success)
-                        .setCustomId('default')
+                        .setCustomId('attack-default')
                 ),
         ]
 
@@ -240,22 +276,26 @@ export default class {
                 new ButtonBuilder()
                     .setLabel('⚔️')
                     .setStyle(ButtonStyle.Primary)
-                    .setCustomId(EquipPos.MainWeapon.type),
+                    .setDisabled(MainWeapon.Items.length === 0)
+                    .setCustomId(`selectType-${EquipPos.MainWeapon.type}`),
 
                 new ButtonBuilder()
                     .setLabel('🗡️')
                     .setStyle(ButtonStyle.Primary)
-                    .setCustomId(EquipPos.SecretWeapon.type),
+                    .setDisabled(SecretWeapon.Items.length === 0)
+                    .setCustomId(`selectType-${EquipPos.SecretWeapon.type}`),
 
                 new ButtonBuilder()
                     .setLabel('💥')
                     .setStyle(ButtonStyle.Primary)
-                    .setCustomId(EquipPos.GeneralTips.type),
+                    .setDisabled(GeneralTips.Items.length === 0)
+                    .setCustomId(`selectType-${EquipPos.GeneralTips.type}`),
 
                 new ButtonBuilder()
                     .setLabel('🃏')
                     .setStyle(ButtonStyle.Primary)
-                    .setCustomId(EquipPos.ItemUse.type)
+                    .setDisabled(ItemUse.Items.length === 0)
+                    .setCustomId(`selectType-${EquipPos.ItemUse.type}`),
             )
             Buttons.push(
                 new ActionRowBuilder<ButtonBuilder>()
@@ -263,12 +303,14 @@ export default class {
                         new ButtonBuilder()
                             .setLabel('🦋')
                             .setStyle(ButtonStyle.Primary)
-                            .setCustomId(EquipPos.Wing.type),
+                            .setDisabled(Wing.Items.length === 0)
+                            .setCustomId(`selectType-${EquipPos.Wing.type}`),
 
                         new ButtonBuilder()
                             .setLabel('👿')
                             .setStyle(ButtonStyle.Danger)
-                            .setCustomId(EquipPos.ItemTransFrom.type)
+                            .setDisabled(ItemTransfrom.Items.length === 0)
+                            .setCustomId(`selectType-${EquipPos.ItemTransFrom.type}`),
                     ),
             )
 
@@ -280,9 +322,7 @@ export default class {
         return { embeds: [Embed], components }
     }
 
-    async DisplayAttack(ItemType: string) {
-        const { GeneralTips, ItemUse, MainWeapon, SecretWeapon, Wing, ItemTransfrom, Armor } = await this.ItemsFinder()
-
-        console.log({ GeneralTips, ItemUse, MainWeapon, SecretWeapon, Wing, ItemTransfrom, Armor })
+    async setDisplayAttack(ItemType?: string) {
+        this.SelectAttackType = ItemType
     }
 }

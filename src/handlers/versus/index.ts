@@ -83,58 +83,76 @@ export class Versus extends EventEmitter {
         if (interaction.customId == 'select-user') {
             if (!interaction.isStringSelectMenu()) return
 
-            if (this.UserTarget == interaction.values[0]) this.UserTarget = undefined
-            else this.UserTarget = interaction.values[0]
+            if (this.UserTarget == interaction.values[0]) {
+                this.UserTarget = undefined
+                this.Render.setUserTarget(undefined)
+            } else {
+                this.UserTarget = interaction.values[0]
+                this.Render.setUserTarget(interaction.values[0])
+            }
 
             await interaction.deferUpdate()
         }
 
-        if (interaction.customId.split("-")[0] == 'attack') {
-            if (!interaction.isStringSelectMenu()) return
-
+        if (interaction.isStringSelectMenu() && interaction.customId.split("-")[0] == 'attack') {
             await interaction.deferReply({ ephemeral: true })
 
             const ItemId = interaction.values[0]
+            const Target = this.UserTarget ? await interaction.guild?.members.fetch(this.UserTarget) : undefined
 
-            const Item = await this.client.Database.Items(ItemId) as ItemsType
+            if (ItemId == 'default') {
+                this.client.Attack.execute(Target, interaction)
+            } else {
+                const Item = await this.client.Database.Items(ItemId) as ItemsType
 
-            const Select = await this.client.Database.Equips.findOne({ UserId: this.UserId, ItemId }) as any as ItemEquip
+                const Select = await this.client.Database.Equips.findOne({ UserId: this.UserId, ItemId }) as any as ItemEquip
 
-            const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
+                const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
 
-            const command: {
-                default: (ItemParameter: ItemParameter) => Promise<StatusType>
-            } = require(`../Item/Type/${Item.Type == 'AB' ? 'ABExtend' : Item.Type}`)
+                const command: {
+                    default: (ItemParameter: ItemParameter) => Promise<StatusType>
+                } = require(`../Item/Type/${Item.Type == 'AB' ? 'ABExtend' : Item.Type}`)
 
-            const Query = { UserId: this.UserId, ItemId, ItemDate: Select.ItemDate, ItemCount: Select.ItemCount }
+                const Query = { UserId: this.UserId, ItemId, ItemDate: Select.ItemDate, ItemCount: Select.ItemCount }
 
-            try {
-                await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: true } })
+                try {
+                    await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: true } })
 
-                const result = await command.default({
-                    client: this.client,
-                    Member: Member,
-                    ItemTarget: Select,
-                    interaction: interaction as any,
-                    Target: this.UserTarget ? await interaction.guild?.members.fetch(this.UserTarget) : undefined,
-                    AcceptCheck: false,
-                })
+                    const result = await command.default({
+                        client: this.client,
+                        Member: Member,
+                        ItemTarget: Select,
+                        interaction: interaction as any,
+                        Target,
+                        AcceptCheck: false,
+                    })
 
-                await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
+                    await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
 
-                if (result.message) return interaction.editReply(result.message)
-            } catch (err) {
-                await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
+                    if (result.message) await interaction.editReply(result.message)
+                } catch (err) {
+                    await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
 
-                this.client.log.try_catch_Handling('🔴', `ItemExecute (${this.UserId} | ${ItemId}): ${err}`)
+                    this.client.log.try_catch_Handling('🔴', `ItemExecute (${this.UserId} | ${ItemId}): ${err}`)
 
-                return interaction.editReply({ content: `เกิดข้อผิดพลาด: ${err}` })
+                    await interaction.editReply({ content: `เกิดข้อผิดพลาด: ${err}` })
+                }
+
+                this.client.VersusManager.emit(EventType.Update, this.ChannelId)
             }
-
-            this.client.VersusManager.emit(EventType.Update, this.ChannelId)
         }
 
+        if (interaction.isButton() && interaction.customId.split("-")[0] == 'selectType') {
+            this.Render.setDisplayAttack(interaction.customId.split('-')[1])
 
+            await interaction.deferUpdate()
+        }
+
+        if (interaction.isButton() && interaction.customId == 'attack-back') {
+            this.Render.setDisplayAttack()
+
+            await interaction.deferUpdate()
+        }
 
         this.emit(EventType.Update)
 

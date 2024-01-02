@@ -1,7 +1,7 @@
 import moment from "moment-timezone"
 
-export const NumberWithCommas = (x: number) => x ? parseInt(x.toString()).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : 0
-export const FloatWithCommas = (x: number) => x ? parseFloat(x.toString()).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : 0
+export const NumberWithCommas = (x: number) => x ? parseInt(x.toString()).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : NaN
+export const FloatWithCommas = (x: number) => x ? parseFloat(x.toString()).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : NaN
 export const Delay = (ms: number) => new Promise(res => setTimeout(res, ms))
 
 export const minToTime = (minutes: number) => `${parseInt((minutes / 60).toFixed(1))}h ${minutes % 60}m`

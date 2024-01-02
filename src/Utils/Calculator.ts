@@ -134,7 +134,8 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
         REF: 0,
     };
 
-    const equip: ItemEquip[] = await client.Database.Equips.find({ UserId: user.UserId }).toArray() as any
+    const Equips: ItemEquip[] = await client.Database.Equips.find({ UserId: user.UserId }).toArray() as any
+    const Effects: ItemEquip[] = await client.Database.Effect.find({ UserId: user.UserId }).toArray() as any
 
     const Calculate = (Passive: Passive, Quality: number) => {
         if (!Quality) Quality = 100
@@ -196,21 +197,20 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
     }
 
     let WE1 = 0
+    const now = Date.now()
 
-    for (let Item of equip) {
-        if (Item.TimeOut) {
-            const ms = Item.TimeOut - Date.now()
-
-            if (ms < 0) {
-                await client.Database.Equips.deleteOne({ UserId: user.UserId, ItemId: Item.ItemId })
-
-                continue
-            }
-        }
-
+    const ProcessItem = async (Item: ItemEquip) => {
         const ItemData = await client.Database.Items(Item.ItemId)
 
-        if (!ItemData) continue
+        if (!ItemData) return
+
+        if  (ItemData.Type == 'AB') {
+            const PassiveMe = ItemData.Extend.PassiveMe
+            const PassiveTarget = ItemData.Extend.PassiveTarget
+
+            if (PassiveMe) Calculate(PassiveMe, Item.Quality)
+            if (PassiveTarget) Calculate(PassiveTarget, Item.Quality)
+        }
 
         const PassiveMe = (ItemData as TypeAB | TypeB).PassiveMe
 
@@ -223,8 +223,28 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
         if (ItemData.Base.Weight) WE1 += parseFloat(ItemData.Base.Weight)
     }
 
+    for (let Item of Equips) {
+        if (Item.TimeOut && Item.TimeOut < now) {
+            await client.Database.Equips.deleteOne({ UserId: user.UserId, ItemId: Item.ItemId })
+
+            continue
+        }
+
+        await ProcessItem(Item)
+    }
+
+    for (let Item of Effects) {
+        if (Item.TimeOut && Item.TimeOut < now) {
+            await client.Database.Effect.deleteOne({ UserId: user.UserId, ItemId: Item.ItemId })
+
+            continue
+        }
+
+        await ProcessItem(Item)
+    }
+
     if (!user.stats.END) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.END': 0 } })
-    if (!user.stats.HEA) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.HEA': { value: 100, UpdateLast: Date.now() } } })
+    if (!user.stats.HEA) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.HEA': { value: 100, UpdateLast: now } } })
     if (!user.stats.STR) await client.Database.Users.updateOne({ UserId: user.UserId }, { $set: { 'stats.STR': 0 } })
 
     const END = user.stats.END ? user.stats.END : 0
@@ -284,10 +304,21 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
     let APW = (parseFloat(level.PARL) * 0.6) + variable.APW
     let CP = (variable.CP + parseFloat(level.CPL))
 
-    return {
+    const ReturnParameters: CalReturn = {
         ...variable, AM, DM, ATT,
         APH, APW, CP,
         HPMax, HP_p, HPR, MPMax, MP_p, MPR, HPT, MPT,
         WEI, WE1, IMM, ACC, EVA, ATS, MOS, SMS
     }
+
+    for (let key in ReturnParameters) {
+        if (isNaN(ReturnParameters[key as keyof CalReturn])) {
+            console.log(key, ReturnParameters[key as keyof CalReturn])
+
+
+            // ReturnParameters[key as keyof CalReturn] = 0
+        }
+    }
+
+    return ReturnParameters
 }

@@ -42,5 +42,5 @@ export interface IUser {
 export interface ICooldown {
     UserId: string
     ItemId: string
-    Timeout: number
+    TimeOut: number
 }

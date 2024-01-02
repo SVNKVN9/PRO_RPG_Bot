@@ -7,7 +7,7 @@ import Client from "./Client";
 import { ObjectID } from "bson";
 
 export default class Utils {
-    constructor(public client: Client) {}
+    constructor(public client: Client) { }
 
     async UpdateHG(UserId: string) {
         const User: IUser = await this.client.Database.Users.findOne({ UserId: UserId }) as any
@@ -25,7 +25,7 @@ export default class Utils {
 
         const msTo30Min = 1000 * 60 * 30
         if (now - (User.stats.HEA || { UpdateLast: 0 }).UpdateLast > msTo30Min) {
-            const TotalPercentage = parseInt((( now - (User.stats.HEA || { UpdateLast: 0 }).UpdateLast ) / msTo30Min).toFixed(0))
+            const TotalPercentage = parseInt(((now - (User.stats.HEA || { UpdateLast: 0 }).UpdateLast) / msTo30Min).toFixed(0))
 
             if (HGF > 0) HEA += TotalPercentage
             else HEA -= TotalPercentage
@@ -51,6 +51,15 @@ export default class Utils {
     }
 
     async UpdateHP_MP(guild: Guild | null, user: IUser, HPMax: number, MPMax: number, HPR: number, MPR: number, HP_p: number, MP_p: number): Promise<{ HP: number, HP_p: number, MP: number, MP_p: number }> {
+
+        if (isNaN(HPMax) || isNaN(MPMax) || isNaN(HPR) || isNaN(MPR) || isNaN(HP_p) || isNaN(MP_p)) {
+            try {
+                const report = this.client.users.cache.get('625538855067713537') || await this.client.users.fetch('625538855067713537')
+
+                report.send({ content: `**isNaN Found** | ${user.UserId} | ${HPMax}, ${MPMax}, ${HPR}, ${MPR}, ${HP_p}, ${MP_p}` })
+            } catch { }
+        }
+
         const now = Date.now()
         const totel = parseInt((((now - user.stats.HP.UpdateLast) / 1000) / 60).toFixed(0))
 
@@ -112,7 +121,18 @@ export default class Utils {
 
                 await RoleChecker(member, RoleName)
             }
-        } catch (err) {  }
+        } catch (err) { }
+
+        if (isNaN(HP) || isNaN(MP)) {
+            try {
+                const report = this.client.users.cache.get('625538855067713537') || await this.client.users.fetch('625538855067713537')
+
+                report.send({ content: `**isNaN Found** | ${user.UserId} | ${HPMax}, ${MPMax}, ${HPR}, ${MPR}, ${HP_p}, ${MP_p}, ${HP}, ${MP}` })
+            } catch { }
+
+            if (isNaN(HP)) HP = 1
+            if (isNaN(MP)) MP = 1
+        }
 
         await this.client.Database.Users.updateOne({
             UserId: user.UserId

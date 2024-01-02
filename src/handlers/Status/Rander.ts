@@ -13,7 +13,7 @@ export const StatusEmbed = async (client: Client, User: IUser, HGD: number, HGF:
         .addFields(
             {
                 name: 'Status',
-                value: `${codeBlock('js', `🩺สุขภาพ         HEA : ${User.stats.HEA.value}%\n🍱ความหิวอาหาร    HGD : ${minToTime(HGD)} ${HGD  == 0 ? '🔴' : '🟢'}\n🍹ความหิวเครื่องดื่ม  HGF : ${minToTime(HGF)} ${HGF  == 0 ? '🔴' : '🟢'}`)}`
+                value: `${codeBlock('js', `🩺สุขภาพ         HEA : ${User.stats.HEA.value}%\n🍱ความหิวอาหาร    HGF : ${minToTime(HGF)} ${HGF  == 0 ? '🔴' : '🟢'}\n🍹ความหิวเครื่องดื่ม  HGD : ${minToTime(HGD)} ${HGD  == 0 ? '🔴' : '🟢'}`)}`
             },
             {
                 name: '📑 สเตตัสทั้งหมด',
@@ -107,9 +107,10 @@ export const SelectStats = async (client: Client, interaction: StringSelectMenuI
     const Level: ILevel = await client.Database.Level.findOne({ LevelNo: User.stats.level.toString() }) as any
 
     const Equips: ItemEquip[] = await client.Database.Equips.find({ UserId: userId }).toArray() as any
-    const Cooldowns = await client.Database.CooldownUse.find({ UserId: userId }).toArray() as any as ICooldown[]
+    const Effects: ItemEquip[] = await client.Database.Effect.find({ UserId: userId }).toArray() as any
+    const Cooldowns = await client.Database.Cooldowns.find({ UserId: userId }).toArray() as any as ICooldown[]
 
-    const Page = new Pages(User, Level, Equips, Cooldowns, client, interaction, parseInt(index))
+    const Page = new Pages(User, Level, Equips, Effects, Cooldowns, client, interaction, parseInt(index))
 
     const message = await Page.Render()
 

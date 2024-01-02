@@ -1,4 +1,4 @@
-import { CommandInteraction, GuildMember, MessageCreateOptions, TextBasedChannel } from "discord.js"
+import { CommandInteraction, GuildMember, MessageCreateOptions, StringSelectMenuInteraction, TextBasedChannel } from "discord.js"
 import { ILevel, IUser } from '../../types'
 import Client from "../../structure/Client"
 import Calculator from "../../Utils/Calculator"
@@ -11,7 +11,7 @@ export default class Attack {
         this.Cooldown = new Map()
     }
 
-    async sendMessage(channel: TextBasedChannel | null, Target: GuildMember, messageOptions: MessageCreateOptions) {
+    private async sendMessage(channel: TextBasedChannel | null, Target: GuildMember, messageOptions: MessageCreateOptions) {
         if (!channel) return
 
         const messages = await Promise.all([
@@ -22,14 +22,14 @@ export default class Attack {
         setTimeout(async () => messages.forEach(message => message.delete()), 10_000)
     }
 
-    async execute(Target: GuildMember | undefined, interaction: CommandInteraction) {
+    async execute(Target: GuildMember | undefined, interaction: StringSelectMenuInteraction) {
         if (!Target) return interaction.editReply({ content: '❌ กรุณาระบุเป้าหมาย' })
 
         const now = Date.now()
         const isMap = this.Cooldown.get(interaction.user.id)
 
         if (isMap) {
-            if (now < isMap.Timeout) return interaction.editReply({ content: `⚠คุณจะสามารถใช้คำสั่ง \`att\` นับถอยหลังในอีก ⏳<t:${(Math.round(isMap.Timeout / 1000))}:R>` })
+            if (now < isMap.Timeout) return interaction.editReply({ content: `❌ คุณต้องรอในอีก ⏳<t:${(Math.round(isMap.Timeout / 1000))}:R>` })
             else this.Cooldown.delete(interaction.user.id)
         }
 
@@ -39,41 +39,42 @@ export default class Attack {
         const target = await this.client.Database.Users.findOne({ UserId: Target.user.id }) as any as IUser
         const targetLevel = await this.client.Database.Level.findOne({ LevelNo: target.stats.level.toString() }) as any as ILevel
 
-        // const { DM, SPt } = await Calculator(this.client, user, level)
-        // const { AM, EV } = await Calculator(this.client, target, targetLevel)
+        const { DM, ATT } = await Calculator(this.client, user, level)
+        const { AM, EVA } = await Calculator(this.client, target, targetLevel)
 
-        // const max = (100 / 100) * DM
-        // const min = (70 / 100) * DM
-        // const random = Math.floor(Math.random() * (max - min + 1) + min)
+        const max = (100 / 100) * DM
+        const min = (70 / 100) * DM
+        const random = Math.floor(Math.random() * (max - min + 1) + min)
 
-        // const cooldown = now + (SPt * 1000)
+        const cooldown = now + (ATT * 1000)
 
-        // this.Cooldown.set(interaction.user.id, { Timeout: cooldown, CooldownSec: SPt })
-        // setTimeout(() => {
-        //     interaction.editReply({ content: '🟢 Cool Down เสร็จสิ้น' })
-        //     this.Cooldown.delete(interaction.user.id)
-        // }, (SPt * 1000))
+        this.Cooldown.set(interaction.user.id, { Timeout: cooldown, CooldownSec: ATT })
+        
+        setTimeout(() => {
+            interaction.editReply({ content: '🟢 Cool Down เสร็จสิ้น' })
+            this.Cooldown.delete(interaction.user.id)
+        }, (ATT * 1000))
 
         const TagFormat = `🔴<@${interaction.user.id}> 👊โจมตี <@${Target.id}>`
-        // const CooldownFormat = `⏳Cool Down <t:${Math.round((now / 1000) + SPt)}:R>`
+        const CooldownFormat = `⏳Cool Down <t:${Math.round((now / 1000) + ATT)}:R>`
 
-        // const expanded: { hit: boolean, Probability: number }[] = [{ hit: true, Probability: EV }, { hit: false, Probability: 100 - EV }].flatMap(hit => Array(hit.Probability).fill(hit))
-        // const randomHit = expanded[Math.floor(Math.random() * expanded.length)]
+        const expanded: { hit: boolean, Probability: number }[] = [{ hit: true, Probability: EVA }, { hit: false, Probability: 100 - EVA }].flatMap(hit => Array(hit.Probability).fill(hit))
+        const randomHit = expanded[Math.floor(Math.random() * expanded.length)]
 
-        // await interaction.editReply({ content: CooldownFormat })
+        await interaction.editReply({ content: CooldownFormat })
 
-        // if (randomHit.hit) return this.sendMessage(interaction.channel, Target, { content: `${TagFormat} 🤸ไม่โดน` })
+        if (randomHit.hit) return this.sendMessage(interaction.channel, Target, { content: `${TagFormat} 🤸ไม่โดน` })
 
-        // if (random < AM) return this.sendMessage(interaction.channel, Target, { content: `${TagFormat} 🛡ไม่เข้า` })
+        if (random < AM) return this.sendMessage(interaction.channel, Target, { content: `${TagFormat} 🛡ไม่เข้า` })
 
-        // await this.client.Database.Users.updateOne({ UserId: Target.user.id }, { $inc: { 'stats.HP.value': -(random) } })
+        await this.client.Database.Users.updateOne({ UserId: Target.user.id }, { $inc: { 'stats.HP.value': -(random) } })
 
         await this.client.Utils.CheckHPisZero(Target.guild, Target.user.id)
 
         const messageOptions: MessageCreateOptions = {}
 
-        // if (random < 10) messageOptions.content = `${TagFormat} เข้า ${random / 100} 🩸HP`
-        // else messageOptions.content = `${TagFormat} เข้า ${NumberWithCommas(random)} 🩸HP`
+        if (random < 10) messageOptions.content = `${TagFormat} เข้า ${random / 100} 🩸HP`
+        else messageOptions.content = `${TagFormat} เข้า ${NumberWithCommas(random)} 🩸HP`
 
         this.sendMessage(interaction.channel, Target, messageOptions)
     }

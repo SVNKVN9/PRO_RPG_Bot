@@ -12,7 +12,7 @@ interface Group {
 
 export const GroupsPage = async (client: Client, UserId: string, pageNo: number): Promise<{ embeds: EmbedBuilder[], components: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] }> => {
     const Items = await client.Database.Inventorys.aggregate([
-        { $match: { UserId } },
+        { $match: { UserId, Select: false } },
         { $group: { _id: "$ItemId", count: { $sum: 1 } } },
         { $lookup: { from: "items", localField: "_id", foreignField: "Base.ItemId", as: "Item" } },
         { $lookup: { from: "groups", localField: "Item.groupId", foreignField: "Id", as: "Group" } }
@@ -71,14 +71,11 @@ export const GroupsPage = async (client: Client, UserId: string, pageNo: number)
 
     const Embed = new EmbedBuilder()
         .setTitle(`🎒 ช่องเก็บไอเทมหลัก`)
-        .setDescription(codeBlock('js', `\n⬛ ความจุรวม : ${NumberWithCommas(CP)}\n✅ ใช้ไป     : ${NumberWithCommas(TotelCP)} (${((TotelCP / CP) * 100).toFixed(2)}%)\n⬜ คงเหลือ   : ${NumberWithCommas(CP - TotelCP)} (${(((CP - TotelCP) / CP) * 100).toFixed(2)}%)`)
-        )
-        .addFields([
-            {
-                name: 'ลำดับ  │ หมวดหมู่  │ ชนิด │ จำนวน',
-                value: codeBlock('js', `${Pages[pageNo - 1] ? Pages[pageNo - 1].str.toString().replace(/,/g, '') : ''}`)
-            }
-        ])
+        .setDescription(codeBlock('js', `\n⬛ ความจุรวม : ${NumberWithCommas(CP)}\n✅ ใช้ไป     : ${NumberWithCommas(TotelCP)} (${((TotelCP / CP) * 100).toFixed(2)}%)\n⬜ คงเหลือ   : ${NumberWithCommas(CP - TotelCP)} (${(((CP - TotelCP) / CP) * 100).toFixed(2)}%)`))
+        .addFields({
+            name: 'ลำดับ  │ หมวดหมู่  │ ชนิด │ จำนวน',
+            value: codeBlock('js', `${Pages[pageNo - 1] ? Pages[pageNo - 1].str.toString().replace(/,/g, '') : ''}`)
+        })
         .setFooter({ text: `หน้า ${pageNo}/${Pages.length}` })
 
     const SelectRow = new ActionRowBuilder<StringSelectMenuBuilder>()
@@ -96,8 +93,17 @@ export const GroupsPage = async (client: Client, UserId: string, pageNo: number)
 
     return {
         embeds: [Embed],
-        components: Pages.length > 1 ?
-            [SelectRow,
+        components: [
+            ...[
+                SelectRow,
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('showSelect')
+                        .setLabel('💼เปิดช่องเก็บไอเทมรอง')
+                        .setStyle(ButtonStyle.Success)
+                )
+            ],
+            ...Pages.length > 1 ? [
                 new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
                         new ButtonBuilder()
@@ -112,8 +118,8 @@ export const GroupsPage = async (client: Client, UserId: string, pageNo: number)
                             .setStyle(ButtonStyle.Primary)
                             .setDisabled(pageNo == Pages.length)
                     )
-            ] :
-            [SelectRow]
+            ] : []
+        ]
     }
 }
 

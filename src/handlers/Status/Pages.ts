@@ -2,7 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedB
 import Calculator from "../../Utils/Calculator"
 import { FloatWithCommas, NumberWithCommas, PrograssBar, minToTime, msToDHM, msToDHMS_Thai_V2, msToHour } from "../../Utils/Function"
 import Client from "../../structure/Client"
-import { EquipPos, ICooldown, ILevel, IUser, ItemEquip, TypeAB, TypeB, TypeP, TypePA, TypePD } from "../../types"
+import { EquipPos, ICooldown, ILevel, IUser, ItemEquip, ItemsType, TypeAB, TypeB, TypeP, TypePA, TypePD } from "../../types"
 import { SecondRow } from "./Rander"
 
 export default class Pages {
@@ -11,15 +11,17 @@ export default class Pages {
     private User: IUser
     private Level: ILevel
     private Equips: ItemEquip[]
+    private Effects: ItemEquip[]
     private Cooldowns: ICooldown[]
     private client: Client
     private interaction: StringSelectMenuInteraction | ButtonInteraction
     private PageNo: number
 
-    constructor(User: IUser, Level: ILevel, Equips: ItemEquip[], Cooldowns: ICooldown[], client: Client, interaction: StringSelectMenuInteraction | ButtonInteraction, PageNo: number, SubPageNo?: number) {
+    constructor(User: IUser, Level: ILevel, Equips: ItemEquip[], Effects: ItemEquip[], Cooldowns: ICooldown[], client: Client, interaction: StringSelectMenuInteraction | ButtonInteraction, PageNo: number, SubPageNo?: number) {
         this.User = User
         this.Level = Level
         this.Equips = Equips
+        this.Effects = Effects
         this.Cooldowns = Cooldowns
         this.client = client
         this.interaction = interaction
@@ -89,11 +91,23 @@ export default class Pages {
 
         const now = Date.now()
 
-        const Items = await Promise.all(this.Equips.map(async Equip => ({
-            Item: await this.client.Database.Items(Equip.ItemId), Equip
+        const Equips = await Promise.all(this.Equips.map(async Equip => ({
+            Item: await this.client.Database.Items(Equip.ItemId),
+            Equip,
+            type: 'Equip'
         })))
 
-        const ItemFilter = Items.filter(({ Item, Equip }) => {
+        const Effects = await Promise.all(this.Effects.map(async Equip => ({
+            Item: await this.client.Database.Items(Equip.ItemId),
+            Equip,
+            type: 'Effect'
+        })))
+
+        const ItemFilter = Equips.concat(Effects).filter(({ Item, Equip }) => {
+            if (Item?.Type == 'AB') {
+                if (Item.Extend.PassiveTarget.EquipPos == EquipPos.type) return true
+            }
+
             const PassiveMe = (Item as TypeAB | TypeB).PassiveMe
 
             if (PassiveMe && PassiveMe.EquipPos == EquipPos.type) return true
@@ -103,29 +117,31 @@ export default class Pages {
             if (PassiveTarget && PassiveTarget.EquipPos == EquipPos.type) return true
 
             return false
-        })
+        }) as ({ Item: ItemsType, Equip: ItemEquip, type: 'Equip' | 'Effect' })[]
 
         const LineStart = '┣───────────────────────────────'
         const LineEnd = '╰───────────────────────────────'
-        // Result.push(`┏ ${EquipPos.title}`)
+        
         Result.push(LineStart)
 
         for (let i in ItemFilter) {
-            const { Equip, Item } = ItemFilter[i]
+            const { Equip, Item, type } = ItemFilter[i]
 
             if (!Item) continue
 
-            const ms = Equip.TimeOut - Date.now()
-
-            if (Equip.TimeOut && ms < 0) {
-                await this.client.Database.Equips.deleteOne({ UserId: this.User.UserId, ItemId: Equip.ItemId })
+            if (Equip.TimeOut && Equip.TimeOut < now) {
+                if (type == 'Equip') await this.client.Database.Equips.deleteOne({ UserId: this.User.UserId, ItemId: Equip.ItemId })
+                else await this.client.Database.Effect.deleteOne({ UserId: this.User.UserId, ItemId: Equip.ItemId })
 
                 continue
             }
+
+            const ms = Equip.TimeOut - now
+
             const CD = this.Cooldowns.find(c => c.ItemId == Equip.ItemId)
 
             const NameFormat = `${Item.Base.ItemId} ${Item.Base.EmojiId ? Item.Base.EmojiId : ''} ${Item.Base.ItemName}`
-            const CooldownFormat = CD ? CD.Timeout < now ? `⏱️${msToDHMS_Thai_V2(now - CD.Timeout)}` : `\`🟢พร้อมใช้\`` : `\`🟢พร้อมใช้\``
+            const CooldownFormat = CD ? CD.TimeOut < now ? `⏱️${msToDHMS_Thai_V2(now - CD.TimeOut)}` : `\`🟢พร้อมใช้\`` : `\`🟢พร้อมใช้\``
 
             switch (Type) {
                 case 1:
@@ -351,7 +367,7 @@ export default class Pages {
     private async Page31() {
         const {
             DM, AM, HPMax, MPMax, HPR, MPR, HP_p, MP_p, HPT, MPT,
-            WEI, IMM, PoR, IPR, MaR, MaD, ACC, EVA, ATS, ATT, MOS, VIS, INS, SCR, ICR
+            WEI, IMM, PoR, IPR, MaR, MaD, ACC, EVA, ATS, ATT, MOS, SMS, REF, VIS, INS, SCR, ICR
         } = await Calculator(this.client, this.User, this.Level)
 
         const { HP, HP_p: HPP, MP, MP_p: MPP } = await this.client.Utils.UpdateHP_MP(this.interaction.guild, this.User, HPMax, MPMax, HPR, MPR, HP_p, MP_p)
@@ -398,7 +414,7 @@ export default class Pages {
                 },
                 {
                     "name": "🏷️ ขีดความสามารถทั่วไป",
-                    "value": codeBlock('js', `1.  น้ำหนักตัวรวมสัมภาระ  WEI : ${WEI} kg\n2.  ภูมิคุ้มกัน           IMM : ${IMM}% \n3.  ต้านทานพิษ         PoR : ${PoR}%\n4.  ต้านทานภายใน       IPR : ${IPR}%\n5.  ต้านทานเวทมนตร์     MaR : ${MaR}%\n6.  ความเสียหายเวท      MaD : ${MaD}%\n7.  ความแม่นยำ         ACC : ${ACC}%\n8.  การหลบหลีก         EVA : ${EVA}%\n9.  ความเร็วโจมตี        ATS : ${ATS}(${ATT} s)\n10. ความเร็วเคลื่อนที่      MOS : ${MOS}\n11. ทัศนวิสัย            VIS : ${VIS} s\n12. สัญชาตญาณ         INS : ${INS} s\n13. ลดคูลดาวน์สกิล       SCR : ${SCR}%\n14. ลดคูลดาวน์ไอเทม      ICR : ${ICR}%`),
+                    "value": codeBlock('js', `1.  น้ำหนักตัวรวมสัมภาระ  WEI : ${WEI} kg\n2.  ภูมิคุ้มกัน           IMM : ${IMM}% \n3.  ต้านทานพิษ         PoR : ${PoR}%\n4.  ต้านทานภายใน       IPR : ${IPR}%\n5.  ต้านทานเวทมนตร์     MaR : ${MaR}%\n6.  ความเสียหายเวท      MaD : ${MaD}%\n7.  ความแม่นยำ         ACC : ${ACC}%\n8.  การหลบหลีก         EVA : ${EVA}%\n9.  ความเร็วโจมตี        ATS : ${ATS}(${ATT} s)\n10. ความเร็วเคลื่อนที่      MOS : ${MOS}\n11. ความเร็วฉับพลัน      SMS : ${SMS}\n12. การสะท้อนกลับ       REF : ${REF}%\n13. ทัศนวิสัย            VIS : ${VIS} s\n14. สัญชาตญาณ         INS : ${INS} s\n15. ลดคูลดาวน์สกิล       SCR : ${SCR}%\n16. ลดคูลดาวน์ไอเทม      ICR : ${ICR}%`),
                     "inline": false
                 }
             )

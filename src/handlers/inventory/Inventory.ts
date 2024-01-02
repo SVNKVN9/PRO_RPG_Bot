@@ -54,12 +54,30 @@ export default class Inventory {
         return this.awaitComponent(await interaction.editReply(await this.Render()))
     }
 
-    private async InventoryFetch() {
-        const Inventory = await this.client.Database.Inventorys.find({ UserId: this.UserId }).toArray() as any as ItemBase[]
+    private async InventoryFetch(Type: 'All' | 'isSelect' | 'NotSelect'): Promise<{ isSelect: ItemBase[], NotSelect: ItemBase[] }> {
+        const isSelect = async () => await this.client.Database.Inventorys.find({ UserId: this.UserId, Select: true }).toArray() as any as ItemBase[]
+        const NotSelect = async () => await this.client.Database.Inventorys.find({
+            $or: [
+                { UserId: this.UserId, Select: false },
+                { UserId: this.UserId, Select: { $exists: false } }
+            ]
+        }).toArray() as any as ItemBase[]
 
-        return {
-            isSelect: Inventory.filter(Item => Item.Select),
-            NotSelect: Inventory.filter(Item => !Item.Select)
+        if (Type == 'All') {
+            return {
+                isSelect: await isSelect(),
+                NotSelect: await NotSelect()
+            }
+        } else if (Type == 'isSelect') {
+            return {
+                isSelect: await isSelect(),
+                NotSelect: []
+            }
+        } else {
+            return {
+                isSelect: [],
+                NotSelect: await NotSelect()
+            }
         }
     }
 
@@ -72,7 +90,7 @@ export default class Inventory {
                 components: [...components]
             }
         } else if (this.State == 'Items') {
-            const { isSelect, NotSelect } = await this.InventoryFetch()
+            const { NotSelect } = await this.InventoryFetch('NotSelect')
 
             const data = await MakeData(this.client, NotSelect)
 
@@ -125,7 +143,7 @@ export default class Inventory {
 
         await this.PageGroup(interaction)
 
-        const { isSelect, NotSelect } = await this.InventoryFetch()
+        const { isSelect, NotSelect } = await this.InventoryFetch('All')
 
         await this.PageItemList(isSelect, NotSelect, interaction)
 
@@ -162,13 +180,26 @@ export default class Inventory {
 
             await interaction.editReply(await this.Render())
         }
+
+        if (interaction.customId == 'showSelect') {
+            if (!interaction.isButton()) return
+
+            new Inventory(this.client, this.UserId, interaction, {
+                State: 'Select',
+                GroupPageNo: this.GroupPageNo,
+                GroupsNo: this.GroupsNo,
+                ListPageNo: this.ListPageNo,
+                ItemId: this.ItemId,
+                ItemPageNo: this.ItemPageNo
+            })
+        }
     }
 
     private async PageItemList(isSelect: ItemBase[], NotSelect: ItemBase[], interaction: ButtonInteraction | StringSelectMenuInteraction) {
         if (interaction.customId.includes('Items')) {
             if (!interaction.isButton()) return
 
-            const [cat, groupNo, pageNo] = interaction.customId.split('-')
+            const [_, groupNo, pageNo] = interaction.customId.split('-')
 
             this.GroupsNo = parseInt(groupNo)
             this.ListPageNo = parseInt(pageNo)
@@ -304,7 +335,13 @@ export default class Inventory {
                 ))
             }
 
-            await interaction.editReply(await this.Render())
+            try {
+                await interaction.editReply(await this.Render())
+            } catch {
+                this.State = 'Groups'
+
+                await interaction.editReply(await this.Render())
+            }
         }
     }
 
@@ -315,7 +352,7 @@ export default class Inventory {
             if (interaction.customId.includes('back')) {
                 this.State = 'Items'
             } else {
-                const [cat, ItemId, pageNo] = interaction.customId.split('-')
+                const [_, ItemId, pageNo] = interaction.customId.split('-')
 
                 this.ItemPageNo = parseInt(pageNo)
             }
