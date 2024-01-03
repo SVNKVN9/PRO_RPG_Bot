@@ -12,7 +12,16 @@ interface Group {
 
 export const GroupsPage = async (client: Client, UserId: string, pageNo: number): Promise<{ embeds: EmbedBuilder[], components: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] }> => {
     const Items = await client.Database.Inventorys.aggregate([
-        { $match: { UserId, Select: false } },
+        {
+            $match: {
+                $or: [
+                    { UserId, Select: false },
+                    {
+                        UserId, Select: { $exists: false }
+                    }
+                ]
+            }
+        },
         { $group: { _id: "$ItemId", count: { $sum: 1 } } },
         { $lookup: { from: "items", localField: "_id", foreignField: "Base.ItemId", as: "Item" } },
         { $lookup: { from: "groups", localField: "Item.groupId", foreignField: "Id", as: "Group" } }
@@ -47,7 +56,13 @@ export const GroupsPage = async (client: Client, UserId: string, pageNo: number)
         GroupAdded.set(group.Id, true)
     };
 
-    for (let Group of Items.sort((a, b) => parseInt(a.Group[0].Index) - parseInt(b.Group[0].Index))) {
+    const groups_sort = Items.sort((a, b) => {
+        if (!a.Group[0] || !b.Group[0]) return 0
+
+        return parseInt(a.Group[0].Index) - parseInt(b.Group[0].Index)
+    })
+
+    for (let Group of groups_sort) {
         const baseSize = Group.Item[0].Base.Size;
         TotelCP += !baseSize ? Group.count : parseInt(baseSize) * Group.count;
 
@@ -267,8 +282,6 @@ export const ItemsList = async (client: Client, groups: Inventory[], groupNo: nu
 export const ItemDetail = async (client: Client, UserId: string, ItemId: string, pageNo: number) => {
     const ItemCount = await client.Database.Inventorys.find({ UserId, ItemId }).count()
     const Items = await client.Database.Inventorys.find({ UserId, ItemId }).skip((pageNo - 1) * 20).limit(20).toArray() as ItemBase[]
-
-    console.log(ItemId)
 
     const Item = await client.Database.Items(ItemId) as ItemsType
     const cooldown = await client.Database.Cooldowns.findOne({ UserId, ItemId }) as any as { UserId: string, ItemId: string, Timeout: number }

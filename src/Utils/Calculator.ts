@@ -260,11 +260,11 @@ export default async (client: Client, user: IUser, level: ILevel): Promise<CalRe
     let HPR = 0
     let MPR = 0
 
-    if (variable.HDm + variable.HD_p > 0) HPR = (-variable.HDm + (HPMax / 100) * (-variable.HD_p / 1440))
-    else HPR = (25 + (0.02 * END) + variable.HRm + (HPMax / 100) * (variable.HR_p / 1400))
+    if (variable.HDm + variable.HD_p < 0 || variable.HDm + variable.HD_p > 0) HPR = (100 / HPMax * variable.HDm) + variable.HD_p
+    else HPR = 25 + (0.02 * END) + (10 / HPMax * variable.HRm) + variable.HR_p
 
-    if (variable.MDm + variable.MD_p > 0) MPR = (-variable.MDm + (MPMax / 100) * (-variable.MD_p / 1440))
-    else MPR = (25 + (0.02 * user.stats.ING) + variable.MRm + (MPMax / 100) * (variable.MR_p / 1400))
+    if (variable.MDm + variable.MD_p < 0 || variable.MDm + variable.MD_p > 0) MPR = (100 / MPMax * variable.MDm) + variable.MD_p
+    else MPR = 25 + (0.02 * user.stats.ING) + (10 / MPMax * variable.MRm) + variable.MR_p
 
     const HPT = (HPMax / 100) * (HPR / 1440)
     const MPT = (MPMax / 100) * (MPR / 1440)

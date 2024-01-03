@@ -110,7 +110,7 @@ export default class {
 
                 if (CD && CD.TimeOut < now) {
                     await this.client.Database.Cooldowns.deleteOne({ UserId: this.UserId, ItemId: Item.Base.ItemId })
-                    
+
                     CD = undefined
                 }
 
@@ -154,7 +154,7 @@ export default class {
                     members.length === 0
                         ? [{ label: 'NONE', value: 'NONE' }]
                         : members.map((member) => ({
-                            label: this.UserTarget === member.id ? `${member.nickname} กำลังเลือก` : `${member.nickname}`,
+                            label: this.UserTarget === member.id ? `${member.nickname ?? member.user.username} กำลังเลือก` : `${member.nickname ?? member.user.username}`,
                             value: member.id
                         }))
                 )
@@ -248,6 +248,7 @@ export default class {
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
                         .setLabel('กลับหน้าหลัก')
+                        .setDisabled(!this.UserTarget)
                         .setStyle(ButtonStyle.Primary)
                         .setCustomId('attack-back')
                 )
@@ -315,6 +316,8 @@ export default class {
             )
 
             components = Buttons
+        } else {
+            components.push(...Buttons)
         }
 
         components.unshift(this.RenderSelectUser(members))

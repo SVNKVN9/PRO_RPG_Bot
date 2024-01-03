@@ -1,4 +1,4 @@
-import { CommandInteraction, GuildMember, MessageCreateOptions, StringSelectMenuInteraction, TextBasedChannel } from "discord.js"
+import { ButtonInteraction, CommandInteraction, GuildMember, MessageCreateOptions, StringSelectMenuInteraction, TextBasedChannel } from "discord.js"
 import { ILevel, IUser } from '../../types'
 import Client from "../../structure/Client"
 import Calculator from "../../Utils/Calculator"
@@ -22,16 +22,28 @@ export default class Attack {
         setTimeout(async () => messages.forEach(message => message.delete()), 10_000)
     }
 
-    async execute(Target: GuildMember | undefined, interaction: StringSelectMenuInteraction) {
+    private handleCooldown(interaction: ButtonInteraction) {
+        const now = Date.now()
+        const userCooldown = this.Cooldown.get(interaction.user.id)
+
+        if (userCooldown && now < userCooldown.Timeout) {
+            const remainingTime = Math.round(userCooldown.Timeout / 1000);
+            interaction.editReply({ content: `❌ คุณต้องรอในอีก ⏳<t:${remainingTime}:R>` });
+
+            setTimeout(() => interaction.editReply({ content: '🟢 Cool Down เสร็จสิ้น' }), userCooldown.Timeout - now);
+            setTimeout(() => interaction.deleteReply(), userCooldown.Timeout - now + 5_000);
+
+            return true;
+        } else {
+            this.Cooldown.delete(interaction.user.id);
+            return false;
+        }
+    }
+
+    async execute(Target: GuildMember | undefined, interaction: ButtonInteraction) {
         if (!Target) return interaction.editReply({ content: '❌ กรุณาระบุเป้าหมาย' })
 
-        const now = Date.now()
-        const isMap = this.Cooldown.get(interaction.user.id)
-
-        if (isMap) {
-            if (now < isMap.Timeout) return interaction.editReply({ content: `❌ คุณต้องรอในอีก ⏳<t:${(Math.round(isMap.Timeout / 1000))}:R>` })
-            else this.Cooldown.delete(interaction.user.id)
-        }
+        if (this.handleCooldown(interaction)) return;
 
         const user = await this.client.Database.Users.findOne({ UserId: interaction.user.id }) as any as IUser
         const level = await this.client.Database.Level.findOne({ LevelNo: user.stats.level.toString() }) as any as ILevel
@@ -42,6 +54,7 @@ export default class Attack {
         const { DM, ATT } = await Calculator(this.client, user, level)
         const { AM, EVA } = await Calculator(this.client, target, targetLevel)
 
+        const now = Date.now()
         const max = (100 / 100) * DM
         const min = (70 / 100) * DM
         const random = Math.floor(Math.random() * (max - min + 1) + min)
@@ -49,11 +62,14 @@ export default class Attack {
         const cooldown = now + (ATT * 1000)
 
         this.Cooldown.set(interaction.user.id, { Timeout: cooldown, CooldownSec: ATT })
-        
-        setTimeout(() => {
-            interaction.editReply({ content: '🟢 Cool Down เสร็จสิ้น' })
+
+        setTimeout(async () => {
+            await interaction.editReply({ content: '🟢 Cool Down เสร็จสิ้น' })
+
             this.Cooldown.delete(interaction.user.id)
         }, (ATT * 1000))
+
+        setTimeout(async () => await interaction.deleteReply(), (ATT * 1000) + 5_000)
 
         const TagFormat = `🔴<@${interaction.user.id}> 👊โจมตี <@${Target.id}>`
         const CooldownFormat = `⏳Cool Down <t:${Math.round((now / 1000) + ATT)}:R>`

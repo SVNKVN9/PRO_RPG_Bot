@@ -1,6 +1,14 @@
 import { CommandInteraction, GuildMember, MessageCreateOptions } from "discord.js"
 
-export type StatusType = { isEnd: boolean, message?: MessageCreateOptions, HPUse?: number, MPUse?: number }
+export type StatusType = {
+    isEnd: boolean
+    message?: MessageCreateOptions
+    HPUse?: number
+    MPUse?: number
+    
+    HPAtt?: number
+    MPAtt?: number
+}
 
 import { FarmRandom, IConditionFarm, IFarmEmbed, IFarmProperties } from "."
 import Client from "../structure/Client"

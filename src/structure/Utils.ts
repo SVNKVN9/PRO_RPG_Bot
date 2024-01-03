@@ -84,7 +84,7 @@ export default class Utils {
                     const role = member.roles.cache.find(role => role.name === roleName)
 
                     if (role) await member.roles.remove(role)
-                } catch (err) {
+                } catch {
 
                 }
             }

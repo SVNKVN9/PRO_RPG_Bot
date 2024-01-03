@@ -12,7 +12,7 @@ export default class Database {
     private MongoURL: string
     private DBName: string
 
-    private QueueLog: any[]
+    private QueueLog: Map<number, any>
 
     public Buttons!: Collection
     public BirthPoint!: Collection
@@ -50,16 +50,15 @@ export default class Database {
 
         this.HTTPClient = new HTTPClient()
 
-        this.QueueLog = []
+        this.QueueLog = new Map()
 
         this.login()
     }
 
     private async login() {
         this.connection = await this.connect()
-        this.getCollections()
 
-        this.SavingLog()
+        this.getCollections()
         this.DeleteLog()
     }
 
@@ -125,7 +124,7 @@ export default class Database {
         if (event.commandName == 'find') return
 
         // 2629800000
-        this.QueueLog.push({
+        this.QueueLog.set(event.requestId, {
             databaseName: event.databaseName,
             commandName: event.commandName,
             command: event.command,
@@ -135,41 +134,19 @@ export default class Database {
     }
 
     private onCommandSucceeded(event: CommandSucceededEvent) {
-        const index = this.QueueLog.findIndex((value) => value.requestId == event.requestId)
+        const request = this.QueueLog.get(event.requestId)
 
-        if (index == -1) return
+        if (!request) return
 
-        this.QueueLog[index].successed = true
-        this.QueueLog[index].successedAt = new Date()
-    }
+        request.successed = true
+        request.successedAt = new Date()
 
-    private SavingLog() {
-        setInterval(async () => {
-            if (!this.QueueLog.length) return
-
-            const insert = this.QueueLog.filter(value => value.successed)
-
-            this.QueueLog = this.QueueLog.filter(value => !value.successed)
-
-            if (!insert.length) return
-
-            this.QueryLogging.insertMany(insert)
-        }, 5_000)
+        this.QueryLogging.insertOne(request)
     }
 
     private async DeleteLog() {
         setInterval(async () => {
             this.QueryLogging.deleteMany({ successedAt: { $lte: new Date(Date.now() - 2_592_000_000) } })
-
-            if (!this.QueueLog.length) return
-
-            const insert = this.QueueLog.filter(value => value.successed)
-
-            this.QueueLog = this.QueueLog.filter(value => !value.successed)
-
-            if (!insert.length) return
-
-            this.QueryLogging.insertMany(insert)
         }, 60_000)
     }
 }

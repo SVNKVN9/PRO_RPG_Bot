@@ -94,52 +94,58 @@ export class Versus extends EventEmitter {
             await interaction.deferUpdate()
         }
 
+        if (interaction.isButton() && interaction.customId.split('-')[0] == 'attack') {
+            await interaction.deferReply({ ephemeral: true })
+
+            const Target = this.UserTarget ? await interaction.guild?.members.fetch(this.UserTarget) : undefined
+
+            await this.client.Attack.execute(Target, interaction)
+
+            this.client.VersusManager.emit(EventType.Update, this.ChannelId)
+        }
+
         if (interaction.isStringSelectMenu() && interaction.customId.split("-")[0] == 'attack') {
             await interaction.deferReply({ ephemeral: true })
 
             const ItemId = interaction.values[0]
             const Target = this.UserTarget ? await interaction.guild?.members.fetch(this.UserTarget) : undefined
 
-            if (ItemId == 'default') {
-                this.client.Attack.execute(Target, interaction)
-            } else {
-                const Item = await this.client.Database.Items(ItemId) as ItemsType
+            const Item = await this.client.Database.Items(ItemId) as ItemsType
 
-                const Select = await this.client.Database.Equips.findOne({ UserId: this.UserId, ItemId }) as any as ItemEquip
+            const Select = await this.client.Database.Equips.findOne({ UserId: this.UserId, ItemId }) as any as ItemEquip
 
-                const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
+            const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
 
-                const command: {
-                    default: (ItemParameter: ItemParameter) => Promise<StatusType>
-                } = require(`../Item/Type/${Item.Type == 'AB' ? 'ABExtend' : Item.Type}`)
+            const command: {
+                default: (ItemParameter: ItemParameter) => Promise<StatusType>
+            } = require(`../Item/Type/${Item.Type == 'AB' ? 'ABExtend' : Item.Type}`)
 
-                const Query = { UserId: this.UserId, ItemId, ItemDate: Select.ItemDate, ItemCount: Select.ItemCount }
+            const Query = { UserId: this.UserId, ItemId, ItemDate: Select.ItemDate, ItemCount: Select.ItemCount }
 
-                try {
-                    await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: true } })
+            try {
+                await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: true } })
 
-                    const result = await command.default({
-                        client: this.client,
-                        Member: Member,
-                        ItemTarget: Select,
-                        interaction: interaction as any,
-                        Target,
-                        AcceptCheck: false,
-                    })
+                const result = await command.default({
+                    client: this.client,
+                    Member: Member,
+                    ItemTarget: Select,
+                    interaction: interaction as any,
+                    Target,
+                    AcceptCheck: false,
+                })
 
-                    await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
+                await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
 
-                    if (result.message) await interaction.editReply(result.message)
-                } catch (err) {
-                    await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
+                if (result.message) await interaction.editReply(result.message)
+            } catch (err) {
+                await this.client.Database.Inventorys.updateOne(Query, { $set: { Locked: false } })
 
-                    this.client.log.try_catch_Handling('🔴', `ItemExecute (${this.UserId} | ${ItemId}): ${err}`)
+                this.client.log.try_catch_Handling('🔴', `ItemExecute (${this.UserId} | ${ItemId}): ${err}`)
 
-                    await interaction.editReply({ content: `เกิดข้อผิดพลาด: ${err}` })
-                }
-
-                this.client.VersusManager.emit(EventType.Update, this.ChannelId)
+                await interaction.editReply({ content: `เกิดข้อผิดพลาด: ${err}` })
             }
+
+            this.client.VersusManager.emit(EventType.Update, this.ChannelId)
         }
 
         if (interaction.isButton() && interaction.customId.split("-")[0] == 'selectType') {

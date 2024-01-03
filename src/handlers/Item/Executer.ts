@@ -807,7 +807,7 @@ export default class {
 
         await this.client.Utils.CheckHPisZero(guild, User.UserId)
 
-        return { IQ: (100 / AttMax) * Att }
+        return { IQ: (100 / AttMax) * Att, AttHP: -AttHP, AttMP: -AttMP }
     }
 
     async DecreaseAttriute(ItemTarget: ItemBase, Item: TypeAB | TypeP | TypePA) {

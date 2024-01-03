@@ -1,5 +1,27 @@
+import { EmbedBuilder, GuildMember, MessageCreateOptions, codeBlock } from "discord.js";
 import { ItemParameter, IUser, StatusType, TypeAB } from "../../../types";
 import { ErrorEmbeds } from "../../../Utils/Components";
+
+const AttackMessage = async (AttHP: number, AttMP: number, Target: GuildMember) => {
+    const Message: MessageCreateOptions = {
+        embeds: [
+            new EmbedBuilder()
+                .setDescription(`<@${Target.id}>${codeBlock(`${AttHP >= 0 ? '🟢' : '🔴'}HP🩸 : ${AttHP}\n${AttMP >= 0 ? '🟢' : '🔴'}MP✨ : ${AttMP}`)}`)
+        ]
+    }
+
+    try {
+        const ChannelMessage = await Target.voice.channel?.send(Message)
+        const DMMessage = await Target.user.send(Message)
+
+        setTimeout(async () => {
+            ChannelMessage?.delete()
+            DMMessage?.delete()
+        }, 10_000)
+    } catch {
+        
+    }
+}
 
 export default async ({ client, Member, ItemTarget, interaction, Target, AcceptCheck = false }: ItemParameter): Promise<StatusType> => {
     const User: IUser = await client.Database.Users.findOne({ UserId: Member.id }) as any
@@ -29,7 +51,9 @@ export default async ({ client, Member, ItemTarget, interaction, Target, AcceptC
 
         if (ConditionTarget.isEnd) return ConditionTarget
 
-        const { IQ } = await client.Executer.Attack(Member.guild, User, Item.Extend.Activate, target, ItemTarget.Quality)
+        const { IQ, AttHP, AttMP } = await client.Executer.Attack(Member.guild, User, Item.Extend.Activate, target, ItemTarget.Quality)
+
+        AttackMessage(AttHP, AttMP, Target)
 
         Quality = IQ
 
