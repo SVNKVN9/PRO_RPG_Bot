@@ -1,9 +1,9 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Collection, CommandInteraction, EmbedBuilder, Guild, GuildMember, Message, MessageCreateOptions, MessageEditOptions, Role, VoiceState } from "discord.js";
 import {
     Activate,
-    AttackActivate,
     ConditionItem, ConditionNotRequire, ConditionRequire, ConditionTarget,
     EquipPos,
+    Evasion,
     IBase, ILevel, ItemBase, ItemEquip, ItemsType, IUser, Notify, Passive, StatusType, TypeAB, TypeB, TypeF, TypeP, TypePA, TypePD, UseCondition
 } from "../../types";
 import Calculator from "../../Utils/Calculator";
@@ -162,7 +162,7 @@ export default class {
 
                 if (EquipLimit.isEnd) return EquipLimit
             }
-            
+
             const Base: IBase = item.Base
 
             let { PeriodUseMessage, PreparationPeriodMessage, FinishMessage } = ConditionItem
@@ -744,13 +744,13 @@ export default class {
         }
     }
 
-    async Attack(guild: Guild, User: IUser, Item: Activate, Target: IUser, IQ: number) {
+    async Attack(guild: Guild, User: IUser, Item: Activate, Target: IUser, IQ: number, ConditionTarget: ConditionTarget) {
         const LevelME: ILevel = await this.client.Database.Level.findOne({ LevelNo: User.stats.level.toString() }) as any
         const LevelTarget: ILevel = await this.client.Database.Level.findOne({ LevelNo: Target.stats.level.toString() }) as any
         const ME = await Calculator(this.client, User, LevelME)
         const {
             HPMax, HPR, HP_p, MPMax, MPR, MP_p,
-            PoR, IPR, AM, MaR, EaR, WaR, AiR, FiR, LiR, IcR
+            PoR, IPR, AM, MaR, EaR, WaR, AiR, FiR, LiR, IcR, EVA, IMM
         } = await Calculator(this.client, Target, LevelTarget)
 
         const { HP, MP } = await this.client.Utils.UpdateHP_MP(guild, Target, HPMax, MPMax, HPR, MPR, HP_p, MP_p)
@@ -797,6 +797,21 @@ export default class {
         if (AttMP < 0) AttMP = 0
 
         let Att = AttHP + AttMP
+
+        // Check Probability hit
+        let Probability = 100
+
+        if (ConditionTarget.Evasion == Evasion.EVA) {
+            if (parseInt(LevelME.LevelNo) <= parseInt(LevelTarget.LevelNo)) Probability = EVA - ME.ACC
+            else Probability = (parseInt(LevelME.LevelNo) - parseInt(LevelTarget.LevelNo)) * (-5) + (EVA - ME.ACC)
+        } else if (ConditionTarget.Evasion == Evasion.IMM) {
+            Probability = IMM
+        }
+
+        const expanded: { hit: boolean, Probability: number }[] = [{ hit: true, Probability }, { hit: false, Probability: 100 - Probability }].flatMap(hit => Array(hit.Probability).fill(hit))
+        const randomHit = expanded[Math.floor(Math.random() * expanded.length)]
+
+        if (!randomHit.hit) return { IQ: (100 / AttMax) * Att, AttHP: -AttHP, AttMP: -AttMP }
 
         await this.client.Database.Users.updateOne({ UserId: Target.UserId }, {
             $inc: {

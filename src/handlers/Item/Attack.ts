@@ -1,4 +1,4 @@
-import { ButtonInteraction, CommandInteraction, GuildMember, MessageCreateOptions, StringSelectMenuInteraction, TextBasedChannel } from "discord.js"
+import { ButtonInteraction, GuildMember, MessageCreateOptions, StringSelectMenuInteraction, TextBasedChannel } from "discord.js"
 import { ILevel, IUser } from '../../types'
 import Client from "../../structure/Client"
 import Calculator from "../../Utils/Calculator"
@@ -51,7 +51,7 @@ export default class Attack {
         const target = await this.client.Database.Users.findOne({ UserId: Target.user.id }) as any as IUser
         const targetLevel = await this.client.Database.Level.findOne({ LevelNo: target.stats.level.toString() }) as any as ILevel
 
-        const { DM, ATT } = await Calculator(this.client, user, level)
+        const { DM, ATT, ACC } = await Calculator(this.client, user, level)
         const { AM, EVA } = await Calculator(this.client, target, targetLevel)
 
         const now = Date.now()
@@ -74,7 +74,12 @@ export default class Attack {
         const TagFormat = `🔴<@${interaction.user.id}> 👊โจมตี <@${Target.id}>`
         const CooldownFormat = `⏳Cool Down <t:${Math.round((now / 1000) + ATT)}:R>`
 
-        const expanded: { hit: boolean, Probability: number }[] = [{ hit: true, Probability: EVA }, { hit: false, Probability: 100 - EVA }].flatMap(hit => Array(hit.Probability).fill(hit))
+        let Probability = 0
+
+        if (parseInt(level.LevelNo) <= parseInt(targetLevel.LevelNo)) Probability = EVA - ACC
+        else Probability = (parseInt(level.LevelNo) - parseInt(targetLevel.LevelNo)) * (-5) + (EVA - ACC)
+
+        const expanded: { hit: boolean, Probability: number }[] = [{ hit: true, Probability }, { hit: false, Probability: 100 - Probability }].flatMap(hit => Array(hit.Probability).fill(hit))
         const randomHit = expanded[Math.floor(Math.random() * expanded.length)]
 
         await interaction.editReply({ content: CooldownFormat })

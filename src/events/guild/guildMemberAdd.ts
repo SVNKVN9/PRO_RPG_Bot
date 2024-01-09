@@ -25,7 +25,7 @@ export default {
         }) as any
 
         if (!invite && user) {
-            const Guild = await client.Database.Guilds.findOne({ id: invite.fromGuildId })
+            const Guild = await client.Database.Guilds(invite.fromGuildId)
 
             if (!Guild.KickWhenMove) return
 
@@ -50,7 +50,7 @@ export default {
 
                 const oldMember = await oldGuild?.members.fetch(member.id)
 
-                const Guild = await client.Database.Guilds.findOne({ id: invite.fromGuildId })
+                const Guild = await client.Database.Guilds(invite.fromGuildId)
 
                 if (!Guild.KickWhenMove) return
 

@@ -23,7 +23,7 @@ export const LevelCal = async (client: Client, guild: Guild, userId: string): Pr
 
     if (Uptime == 0) return
 
-    const { TxActivate, TxValue } = await client.Database.Guilds.findOne({ id: guild.id })
+    const { TxActivate, TxValue } = await client.Database.Guilds(guild.id)
 
     if (!TxActivate) return
 
@@ -55,7 +55,7 @@ export const LevelCal = async (client: Client, guild: Guild, userId: string): Pr
     if (EAL < APW_cal) E2 = EAL
     if (EAL > APW_cal) E2 = EAL - APW_cal
 
-    const EXPa = user.stats.exp + (Uptime + (EAH - E1) + (EPH / DayNeed) * Uptime) * (parseFloat(TxValue) + Tx) + (EAL - E2) + (EPW / DayNeed) * Uptime
+    const EXPa = user.stats.exp + (Uptime + (EAH - E1) + (EPH / DayNeed) * Uptime) * (TxValue + Tx) + (EAL - E2) + (EPW / DayNeed) * Uptime
 
     if (EAH < APH_cal) EAH = 0
     if (EAH > APH_cal) EAH = E1

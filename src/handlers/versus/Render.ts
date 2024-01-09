@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Collection, CommandInteraction, EmbedBuilder, GuildMember, StringSelectMenuBuilder, codeBlock } from "discord.js"
 import Calculator from "../../Utils/Calculator"
-import { CreateId, NumberWithCommas, PrograssBar } from "../../Utils/Function"
+import { CreateId, FloatWithCommas, NumberWithCommas, PrograssBar } from "../../Utils/Function"
 import Client from "../../structure/Client"
 import { ICooldown, ILevel, IUser, ItemEquip, TypeAB, TypeB, TypeP, TypePA, TypePD, EquipPos } from "../../types"
 
@@ -37,7 +37,15 @@ export default class {
         else if (MP_p >= 10) MPName = '🟦'
         else MPName = ''
 
-        return `${codeBlock(`${Level.LevelName}\n╭ HP🩸${HPName}${HP_p}%\n╰ HP🩸${NumberWithCommas(HP)}\n╭ MP✨${MPName}${MP_p}%\n╰ MP✨${NumberWithCommas(MP)}\n`)}`
+        const PlusSubtractFinder = (value: number): string => value <= 0 ? '' : `+`
+
+        return `${codeBlock([
+            `${Level.LevelName}`,
+            `╭ HP🩸${HPName}${FloatWithCommas(HP_p)}%`,
+            `╰ HP🩸${NumberWithCommas(HP)} (${PlusSubtractFinder(HPR)}${NumberWithCommas(HPR)}%)`,
+            `╭ MP✨${MPName}${FloatWithCommas(MP_p)}%`,
+            `╰ MP✨${NumberWithCommas(MP)} (${PlusSubtractFinder(MPR)}${NumberWithCommas(MPR)}%)`
+        ].join('\n'))}`
     }
 
     private async TargetRender(Embed: EmbedBuilder, Escape: Collection<string, number>) {
@@ -144,21 +152,32 @@ export default class {
     }
 
     RenderSelectUser(members: GuildMember[]) {
-        return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('select-user')
-                .setPlaceholder('🎯เลือกเป้าหมายที่ต้องการ')
-                .setDisabled(members.length === 0)
-                .setMinValues(1)
-                .addOptions(
-                    members.length === 0
-                        ? [{ label: 'NONE', value: 'NONE' }]
-                        : members.map((member) => ({
-                            label: this.UserTarget === member.id ? `${member.nickname ?? member.user.username} กำลังเลือก` : `${member.nickname ?? member.user.username}`,
-                            value: member.id
-                        }))
-                )
-        );
+        try {
+            return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('select-user')
+                    .setPlaceholder('🎯เลือกเป้าหมายที่ต้องการ')
+                    .setDisabled(members.length === 0)
+                    .setMinValues(1)
+                    .addOptions(
+                        members.length === 0
+                            ? [{ label: 'NONE', value: 'NONE' }]
+                            : members.map((member) => ({
+                                label: this.UserTarget === member.id ? `${member.nickname ?? member.user.username} (${member.user.username}) กำลังเลือก` : `${member.nickname ?? member.user.username} (${member.user.username})`,
+                                value: member.id
+                            }))
+                    )
+            );
+        } catch {
+            return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('select-user')
+                    .setPlaceholder('🎯เลือกเป้าหมายที่ต้องการ')
+                    .setDisabled(true)
+                    .setMinValues(1)
+                    .addOptions([{ label: 'NONE', value: 'NONE' }])
+            );
+        }
     }
 
     async Display(Escape: Collection<string, number>) {
@@ -267,6 +286,7 @@ export default class {
                 .addComponents(
                     new ButtonBuilder()
                         .setLabel('👊')
+                        .setDisabled(!this.UserTarget)
                         .setStyle(ButtonStyle.Success)
                         .setCustomId('attack-default')
                 ),

@@ -8,7 +8,6 @@ export default async ({ client, Member, ItemTarget, interaction, Target, AcceptC
     const ItemNameFormat = `${Item.Base.ItemId} ${Item.Base.EmojiId ?? ''} ${Item.Base.ItemName}`
 
     if (Target) {
-        if (Target.id == Member.id) return { isEnd: false, message: { embeds: [ErrorEmbeds.ActionSelf()] } }
         if (Member.voice.channel !== Target.voice.channel) return { isEnd: false, message: { embeds: [ErrorEmbeds.ChannelNotMatch(Target.user.id)] } }
 
         if (AcceptCheck) {
@@ -38,7 +37,7 @@ export default async ({ client, Member, ItemTarget, interaction, Target, AcceptC
 
             if (ConditionTarget.isEnd) return ConditionTarget
 
-            const { IQ } = await client.Executer.Attack(Member.guild, User, Item.Activate, target, ItemTarget.Quality)
+            const { IQ } = await client.Executer.Attack(Member.guild, User, Item.Activate, target, ItemTarget.Quality, Item.ConditionTarget)
 
             Quality = IQ
         }

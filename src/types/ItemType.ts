@@ -342,7 +342,8 @@ export enum TargetType {
     Group = 'Group'
 }
 export enum Evasion {
-    EVR = 'EVR',
+    NONE = 'NONE',
+    EVA = 'EVA',
     IMM = 'IMM'
 }
 

@@ -57,10 +57,6 @@ const executeComamnd = async (client: Client, interaction: CommandInteraction) =
 
     if (!command) return
 
-    const { slashcommand } = await client.Database.Guilds.findOne({ id: interaction.guildId as string })
-
-    if (!slashcommand) return interaction.reply({ content: '❌ไม่สามารถใช้ SlashCommand เซิร์ฟเวอร์ดิสคอร์ดนี้ได้', ephemeral: true })
-
     if (!client.cooldowns.has(commandName)) {
         client.cooldowns.set(commandName, new Collection())
     }

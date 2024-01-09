@@ -16,9 +16,10 @@ export default async (client: Client, ownId: string | null, UserIds: string | st
 
         let ItemDate = `${day}${month}${year[2]}${year[3]}`
 
-        const Items = await client.Database.Inventorys.find({ ItemDate: ItemDate, ItemId: ItemId }).toArray()
+        const Items = await client.Database.Inventorys.find({ ItemDate: ItemDate, ItemId: ItemId }).toArray() as ItemBase[]
+        const Equips = await client.Database.Equips.find({ ItemDate: ItemDate, ItemId: ItemId }).toArray() as ItemBase[]
+        const Effects = await client.Database.Effect.find({ ItemDate: ItemDate, ItemId: ItemId }).toArray() as ItemBase[]
         const isItem = await client.Database.Items(ItemId)
-
 
         if (!isItem) return {
             Message: {
@@ -27,7 +28,7 @@ export default async (client: Client, ownId: string | null, UserIds: string | st
             data: []
         }
 
-        const ItemCount = Items.reduce((max, Item) => Item.ItemCount > max ? Item.ItemCount : max, Items[0] ? Items[0].ItemCount : 0)
+        const ItemCount = [...Items, ...Equips, ...Effects].reduce((max, Item) => Item.ItemCount > max ? Item.ItemCount : max, Items[0] ? Items[0].ItemCount : 0)
 
         let InputData: ItemBase[] = []
 

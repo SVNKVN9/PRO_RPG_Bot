@@ -41,7 +41,7 @@ export default class {
             if (!channel) return
 
             try {
-                const Guild = await this.client.Database.Guilds.findOne({ id: channel.guildId })
+                const Guild = await this.client.Database.Guilds(channel.guildId)
 
                 const guild = this.client.guilds.cache.get(channel.guildId)
 
@@ -72,7 +72,7 @@ export default class {
                 if (guild.id == newState.guild?.id) return
                 if (this.client.config.Servers.includes(guild.id)) return
 
-                const Guild = await this.client.Database.Guilds.findOne({ id: guild.id })
+                const Guild = await this.client.Database.Guilds(guild.id)
 
                 if (!Guild.KickWhenMove) return
 

@@ -90,11 +90,11 @@ export default class Inventory {
                 components: [...components]
             }
         } else if (this.State == 'Items') {
-            const { NotSelect } = await this.InventoryFetch('NotSelect')
+            // const { NotSelect } = await this.InventoryFetch('NotSelect')
 
-            const data = await MakeData(this.client, NotSelect)
+            // const data = await MakeData(this.client, NotSelect)
 
-            const { embeds, row1, row2, row3, row4 } = await ItemsList(this.client, data, this.GroupsNo as number, this.ListPageNo as number, this.UserId)
+            const { embeds, row1, row2, row3, row4 } = await ItemsList(this.client, this.GroupsNo as number, this.ListPageNo as number, this.UserId)
 
             return {
                 embeds: [...embeds],

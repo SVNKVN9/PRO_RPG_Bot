@@ -1,10 +1,8 @@
 import { MongoClient, Db, Collection, CommandStartedEvent, CommandSucceededEvent } from "mongodb";
 import User from "./Database/User";
-import Inventory from "./Database/Inventory";
-import Guild from "./Database/Guild";
 import Client from "./Client";
 import HTTPClient, { APIRoutes } from "../Utils/HTTPClient";
-import { TypeAB, TypeB, TypeF, TypeP, TypePA, TypePD } from "../types";
+import { IGuild, TypeAB, TypeB, TypeF, TypeP, TypePA, TypePD } from "../types";
 
 export default class Database {
     public connection!: Db
@@ -33,7 +31,7 @@ export default class Database {
     // public Passive!: Collection
     public Walk!: Collection
     public RoleVoice!: Collection
-    public Guilds!: Guild
+    // public Guilds!: Guild
     public Uptime!: Collection
     public Backup!: Collection
     public Farm!: Collection
@@ -83,6 +81,37 @@ export default class Database {
         return await this.HTTPClient.request('GET', APIRoutes.FetchGroups(GroupId))
     }
 
+    public async Guilds(GuildId: string | null): Promise<IGuild> {
+        const res = await this.HTTPClient.request('GET', APIRoutes.FetchGuilds(GuildId))
+
+        if (!res) return this.CreateGuild(GuildId as string)
+
+        return res
+    }
+
+    public async CreateGuild(GuildId: string) {
+        const guild = this.client.guilds.cache.get(GuildId) || await this.client.guilds.fetch(GuildId as string)
+
+        const data: IGuild = {
+            id: guild.id,
+            name: guild.name,
+            iconURL: guild.iconURL() || '',
+            TxActivate: true,
+            TxValue: 1,
+            Trade: false,
+            isAttack: false,
+            KickWhenDie: false,
+            KickWhenMove: false,
+            isVs: false,
+            KickWhenJoin: false,
+            Timeout: true
+        }
+
+        await this.HTTPClient.request('POST', APIRoutes.CreateGuild(), data)
+
+        return data
+    }
+
     private getCollections() {
         const { connection } = this
 
@@ -107,7 +136,7 @@ export default class Database {
         this.Walk = connection.collection('walk')
         this.RoleVoice = connection.collection('rolevoices')
         // this.Guilds = connection.collection('guilds')
-        this.Guilds = new Guild(connection.collection('guilds'))
+        // this.Guilds = new Guild(connection.collection('guilds'))
         this.Uptime = connection.collection('uptimelogs')
         this.Backup = connection.collection('backup')
         this.Farm = connection.collection('farms')

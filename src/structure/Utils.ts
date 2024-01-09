@@ -51,7 +51,6 @@ export default class Utils {
     }
 
     async UpdateHP_MP(guild: Guild | null, user: IUser, HPMax: number, MPMax: number, HPR: number, MPR: number, HP_p: number, MP_p: number): Promise<{ HP: number, HP_p: number, MP: number, MP_p: number }> {
-
         if (isNaN(HPMax) || isNaN(MPMax) || isNaN(HPR) || isNaN(MPR) || isNaN(HP_p) || isNaN(MP_p)) {
             try {
                 const report = this.client.users.cache.get('625538855067713537') || await this.client.users.fetch('625538855067713537')
@@ -181,7 +180,7 @@ export default class Utils {
 
                 await this.client.Database.Users.updateOne({ UserId }, { $set: { alive: false } })
 
-                const Guild = await this.client.Database.Guilds.findOne({ id: SpanwGuild.id })
+                const Guild = await this.client.Database.Guilds(SpanwGuild.id)
 
                 if (!Guild.KickWhenDie) return
 

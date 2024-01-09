@@ -1,4 +1,4 @@
-import { Collection, CommandInteraction, GuildMember, Message, VoiceState } from "discord.js";
+import { ButtonInteraction, Collection, CommandInteraction, GuildMember, Message, StringSelectMenuInteraction, VoiceState } from "discord.js";
 import Client from "../../structure/Client";
 import { EquipPos, ItemEquip, ItemParameter, ItemsType, StatusType } from "../../types";
 import { EventEmitter } from 'events'
@@ -94,27 +94,31 @@ export class Versus extends EventEmitter {
             await interaction.deferUpdate()
         }
 
-        if (interaction.isButton() && interaction.customId.split('-')[0] == 'attack') {
+        const DefaultAttack = async (interaction: ButtonInteraction) => {
             await interaction.deferReply({ ephemeral: true })
 
             const Target = this.UserTarget ? await interaction.guild?.members.fetch(this.UserTarget) : undefined
+            const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
+
+            if (Target?.voice.channelId != Member.voice.channelId) return interaction.editReply({ content: '❌ไม่ได้อยู่ในห้องเดียวกันกับเป้าหมาย' })
 
             await this.client.Attack.execute(Target, interaction)
 
             this.client.VersusManager.emit(EventType.Update, this.ChannelId)
         }
 
-        if (interaction.isStringSelectMenu() && interaction.customId.split("-")[0] == 'attack') {
+        const ItemAttack = async (interaction: StringSelectMenuInteraction) => {
             await interaction.deferReply({ ephemeral: true })
 
             const ItemId = interaction.values[0]
             const Target = this.UserTarget ? await interaction.guild?.members.fetch(this.UserTarget) : undefined
+            const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
+
+            if (Target?.voice.channelId != Member.voice.channelId) return interaction.editReply({ content: '❌ไม่ได้อยู่ในห้องเดียวกันกับเป้าหมาย' })
 
             const Item = await this.client.Database.Items(ItemId) as ItemsType
 
             const Select = await this.client.Database.Equips.findOne({ UserId: this.UserId, ItemId }) as any as ItemEquip
-
-            const Member = interaction.guild?.members.cache.get(interaction.user.id) || await interaction.guild?.members.fetch(interaction.user.id) as GuildMember
 
             const command: {
                 default: (ItemParameter: ItemParameter) => Promise<StatusType>
@@ -148,7 +152,11 @@ export class Versus extends EventEmitter {
             this.client.VersusManager.emit(EventType.Update, this.ChannelId)
         }
 
-        if (interaction.isButton() && interaction.customId.split("-")[0] == 'selectType') {
+        if (interaction.isButton() && interaction.customId.split('-')[0] == 'attack') await DefaultAttack(interaction)
+
+        if (interaction.isStringSelectMenu() && interaction.customId.split('-')[0] == 'attack') await ItemAttack(interaction) 
+
+        if (interaction.isButton() && interaction.customId.split('-')[0] == 'selectType') {
             this.Render.setDisplayAttack(interaction.customId.split('-')[1])
 
             await interaction.deferUpdate()

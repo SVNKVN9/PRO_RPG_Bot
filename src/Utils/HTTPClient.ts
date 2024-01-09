@@ -1,10 +1,13 @@
 import axios from "axios";
+import { IGuild } from "../types";
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export const APIRoutes = {
     FetchItems: (ItemId?: string) => `/items/${ItemId ?? ''}`,
-    FetchGroups: (GroupId?: string) => `/groups/${GroupId ?? ''}`
+    FetchGroups: (GroupId?: string) => `/groups/${GroupId ?? ''}`,
+    FetchGuilds: (GuildId?: string | null) => `/guilds/${GuildId ?? ''}`,
+    CreateGuild: () => `/guilds`
 }
 
 export default class {

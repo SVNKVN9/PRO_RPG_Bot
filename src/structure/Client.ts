@@ -39,28 +39,28 @@ export default class extends Client {
     constructor() {
         super({
             intents: [
-                GatewayIntentBits.DirectMessageReactions,
-                GatewayIntentBits.DirectMessageTyping,
-                GatewayIntentBits.DirectMessages,
-                GatewayIntentBits.GuildEmojisAndStickers,
+                // GatewayIntentBits.DirectMessageReactions,
+                // GatewayIntentBits.DirectMessageTyping,
+                // GatewayIntentBits.DirectMessages,
+                // GatewayIntentBits.GuildEmojisAndStickers,
                 GatewayIntentBits.GuildIntegrations,
                 GatewayIntentBits.GuildInvites,
                 GatewayIntentBits.GuildMembers,
-                GatewayIntentBits.GuildMessageReactions,
-                GatewayIntentBits.GuildMessageTyping,
-                GatewayIntentBits.GuildMessages,
-                GatewayIntentBits.GuildPresences,
-                GatewayIntentBits.GuildScheduledEvents,
+                // GatewayIntentBits.GuildMessageReactions,
+                // GatewayIntentBits.GuildMessageTyping,
+                // GatewayIntentBits.GuildMessages,
+                // GatewayIntentBits.GuildPresences,
+                // GatewayIntentBits.GuildScheduledEvents,
                 GatewayIntentBits.GuildVoiceStates,
                 GatewayIntentBits.GuildWebhooks,
                 GatewayIntentBits.Guilds,
-                GatewayIntentBits.MessageContent,
+                // GatewayIntentBits.MessageContent,
             ],
             partials: [
                 Partials.Channel,
                 Partials.GuildMember,
                 Partials.GuildScheduledEvent,
-                Partials.Message,
+                // Partials.Message,
                 Partials.Reaction,
                 Partials.ThreadMember,
                 Partials.User,
@@ -70,7 +70,6 @@ export default class extends Client {
         this.processing = 0
 
         this.config = require('../../config.json')
-        // this.GlobalConfig = require('../../../config.json')
 
         this.commands = new Collection()
         this.aliases = new Collection()

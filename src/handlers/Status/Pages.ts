@@ -121,7 +121,7 @@ export default class Pages {
 
         const LineStart = '┣───────────────────────────────'
         const LineEnd = '╰───────────────────────────────'
-        
+
         Result.push(LineStart)
 
         for (let i in ItemFilter) {
@@ -276,7 +276,7 @@ export default class Pages {
     private async Page1() {
         const { Tx, APH, APW, EPH, EPW } = await Calculator(this.client, this.User, this.Level)
 
-        const { TxValue } = await this.client.Database.Guilds.findOne({ id: this.interaction.guildId as string })
+        const { TxValue } = await this.client.Database.Guilds(this.interaction.guildId)
         const rawlevels = await this.client.Database.Level.find({}).toArray() as any as ILevel[]
         const levels = rawlevels.sort((a, b) => parseInt(a.EXPNeed) - parseInt(b.EXPNeed))
 
@@ -321,7 +321,7 @@ export default class Pages {
                 },
                 {
                     "name": "📈Tx อัตราการบ่มเพราะพลัง",
-                    "value": codeBlock('autohotkey', `${FloatWithCommas(Tx + parseFloat(TxValue))}`),
+                    "value": codeBlock('autohotkey', `${FloatWithCommas(Tx + TxValue)}`),
                     "inline": false
                 },
                 {
@@ -394,12 +394,20 @@ export default class Pages {
             .addFields(
                 {
                     "name": "🩸พลังชีวิต",
-                    "value": codeBlock('js', `HP%🩸${HPName}${HPP}%\nHP 🩸${NumberWithCommas(HP)}\nHPR🩸${HPR}% (${PlusSubtractFinder(HPT)}${FloatWithCommas(HPT)} /min.)`),
+                    "value": codeBlock('js', [
+                        `HP%🩸${HPName}${NumberWithCommas(HPP)}%`,
+                        `HP 🩸${NumberWithCommas(HP)}`,
+                        `HPR🩸${HPR}% (${PlusSubtractFinder(HPT)}${FloatWithCommas(HPT)} /min.)`
+                    ].join('\n')),
                     "inline": false
                 },
                 {
                     "name": "✨พลังจิต",
-                    "value": codeBlock('js', `MP%✨${MPName}${MPP}%\nMP ✨${NumberWithCommas(MP)}\nMPR✨${MPR}% (${PlusSubtractFinder(MPT)}${FloatWithCommas(MPT)} /min.)`),
+                    "value": codeBlock('js', [
+                        `MP%✨${MPName}${NumberWithCommas(MPP)}%`,
+                        `MP ✨${NumberWithCommas(MP)}`,
+                        `MPR✨${MPR}% (${PlusSubtractFinder(MPT)}${FloatWithCommas(MPT)} /min.)`
+                    ].join('\n')),
                     "inline": false
                 },
                 {
@@ -414,7 +422,24 @@ export default class Pages {
                 },
                 {
                     "name": "🏷️ ขีดความสามารถทั่วไป",
-                    "value": codeBlock('js', `1.  น้ำหนักตัวรวมสัมภาระ  WEI : ${WEI} kg\n2.  ภูมิคุ้มกัน           IMM : ${IMM}% \n3.  ต้านทานพิษ         PoR : ${PoR}%\n4.  ต้านทานภายใน       IPR : ${IPR}%\n5.  ต้านทานเวทมนตร์     MaR : ${MaR}%\n6.  ความเสียหายเวท      MaD : ${MaD}%\n7.  ความแม่นยำ         ACC : ${ACC}%\n8.  การหลบหลีก         EVA : ${EVA}%\n9.  ความเร็วโจมตี        ATS : ${ATS}(${ATT} s)\n10. ความเร็วเคลื่อนที่      MOS : ${MOS}\n11. ความเร็วฉับพลัน      SMS : ${SMS}\n12. การสะท้อนกลับ       REF : ${REF}%\n13. ทัศนวิสัย            VIS : ${VIS} s\n14. สัญชาตญาณ         INS : ${INS} s\n15. ลดคูลดาวน์สกิล       SCR : ${SCR}%\n16. ลดคูลดาวน์ไอเทม      ICR : ${ICR}%`),
+                    "value": codeBlock('js', [
+                        `1.  น้ำหนักตัวรวมสัมภาระ  WEI : ${NumberWithCommas(WEI)} kg`,
+                        `2.  ภูมิคุ้มกัน           IMM : ${NumberWithCommas(IMM)}%`,
+                        `3.  ต้านทานพิษ         PoR : ${NumberWithCommas(PoR)}%`,
+                        `4.  ต้านทานภายใน       IPR : ${NumberWithCommas(IPR)}%`,
+                        `5.  ต้านทานเวทมนตร์     MaR : ${NumberWithCommas(MaR)}%`,
+                        `6.  ความเสียหายเวท      MaD : ${NumberWithCommas(MaD)}%`,
+                        `7.  ความแม่นยำ         ACC : ${NumberWithCommas(ACC)}%`,
+                        `8.  การหลบหลีก         EVA : ${NumberWithCommas(EVA)}%`,
+                        `9.  ความเร็วโจมตี        ATS : ${NumberWithCommas(ATS)}(${FloatWithCommas(ATT)} s)`,
+                        `10. ความเร็วเคลื่อนที่      MOS : ${NumberWithCommas(MOS)}`,
+                        `11. ความเร็วฉับพลัน      SMS : ${NumberWithCommas(SMS)}`,
+                        `12. การสะท้อนกลับ       REF : ${NumberWithCommas(REF)}%`,
+                        `13. ทัศนวิสัย            VIS : ${NumberWithCommas(VIS)} s`,
+                        `14. สัญชาตญาณ         INS : ${NumberWithCommas(INS)} s`,
+                        `15. ลดคูลดาวน์สกิล       SCR : ${NumberWithCommas(SCR)}%`,
+                        `16. ลดคูลดาวน์ไอเทม      ICR : ${NumberWithCommas(ICR)}%`
+                    ].join('\n')),
                     "inline": false
                 }
             )
@@ -431,11 +456,25 @@ export default class Pages {
             .addFields(
                 {
                     name: 'ความเสียหายการโจมตีธาตุ',
-                    value: codeBlock(`autohotkey`, `● ความเสียหาย🗻ธาตุดิน       EaD : ${EaD}%\n● ความเสียหาย💧ธาตุน้ำ       WaD : ${WaD}%\n● ความเสียหาย🌀ธาตุลม       AiD : ${AiD}%\n● ความเสียหาย🔥ธาตุไฟ       FiD : ${FiD}%\n● ความเสียหาย⚡ธาตุสายฟ้า    LiD : ${LiD}%\n● ความเสียหาย🧊ธาตุน้ำแข็ง    IcD : ${IcD}%`)
+                    value: codeBlock('autohotkey', [
+                        `● ความเสียหาย🗻ธาตุดิน       EaD : ${NumberWithCommas(EaD)}%`,
+                        `● ความเสียหาย💧ธาตุน้ำ        WaD : ${NumberWithCommas(WaD)}%`,
+                        `● ความเสียหาย🌀ธาตุลม       AiD : ${NumberWithCommas(AiD)}%`,
+                        `● ความเสียหาย🔥ธาตุไฟ       FiD : ${NumberWithCommas(FiD)}%`,
+                        `● ความเสียหาย⚡ธาตุสายฟ้า    LiD : ${NumberWithCommas(LiD)}%`,
+                        `● ความเสียหาย🧊ธาตุน้ำแข็ง    IcD : ${NumberWithCommas(IcD)}%`
+                    ].join('\n'))
                 },
                 {
                     name: 'ต้านทานการโจมตีธาตุ',
-                    value: codeBlock(`autohotkey`, `● ต้านทาน🗻ธาตุดิน          EaR : ${EaR}%\n● ต้านทาน💧ธาตุน้ำ          WaR : ${WaR}%\n● ต้านทาน🌀ธาตุลม          AiR : ${AiR}%\n● ต้านทาน🔥ธาตุไฟ          FiR : ${FiR}%\n● ต้านทาน⚡ธาตุสายฟ้า       LiR : ${LiR}%\n● ต้านทาน🧊ธาตุน้ำแข็ง       IcR : ${IcR}%`)
+                    value: codeBlock('autohotkey', [
+                        `● ต้านทาน🗻ธาตุดิน          EaR : ${NumberWithCommas(EaR)}%`,
+                        `● ต้านทาน💧ธาตุน้ำ          WaR : ${NumberWithCommas(WaR)}%`,
+                        `● ต้านทาน🌀ธาตุลม          AiR : ${NumberWithCommas(AiR)}%`,
+                        `● ต้านทาน🔥ธาตุไฟ          FiR : ${NumberWithCommas(FiR)}%`,
+                        `● ต้านทาน⚡ธาตุสายฟ้า       LiR : ${NumberWithCommas(LiR)}%`,
+                        `● ต้านทาน🧊ธาตุน้ำแข็ง       IcR : ${NumberWithCommas(IcR)}%`
+                    ].join('\n'))
                 }
             )
     }
@@ -460,7 +499,7 @@ export default class Pages {
             HP, HP_p: HPP, MP, MP_p: MPP
         } = await this.client.Utils.UpdateHP_MP(this.interaction.guild, this.User, HPMax, MPMax, HPR, MPR, HP_p, MP_p)
 
-        const { TxValue } = await this.client.Database.Guilds.findOne({ id: this.interaction.guildId as string })
+        const { TxValue } = await this.client.Database.Guilds(this.interaction.guildId)
 
         const PlusSubtractFinder = (value: number): string => value <= 0 ? '' : `+`
 
@@ -473,7 +512,7 @@ export default class Pages {
                         `1.  Level : ${this.Level.LevelNo}`,
                         `2.  Time : ${msToDHM(time)} (${msToHour(time)})`,
                         `3.  EXP : ${FloatWithCommas(exp)}`,
-                        `4.  Tx  : ${FloatWithCommas(Tx + parseFloat(TxValue))}`,
+                        `4.  Tx  : ${FloatWithCommas(Tx + TxValue)}`,
                         `5.  XPs : ${this.Level.XPs}`,
                         `6.  EP% : ${EP_p} %`,
                         `7.  APH : ${FloatWithCommas(APH)}/D`,
@@ -650,48 +689,66 @@ export default class Pages {
     }
 
     private async Page6() {
+        const ItemDecoration = await this.EquipPositionFinder(EquipPos.ItemDecoration, 5)
+        const Emblem = await this.EquipPositionFinder(EquipPos.Emblem, 7)
+        const Armor = await this.EquipPositionFinder(EquipPos.Armor, 3)
+        const Wing = await this.EquipPositionFinder(EquipPos.Wing, 4)
+        const MainWeapon = await this.EquipPositionFinder(EquipPos.MainWeapon, 4)
+
         this.Embed.setTitle('👘 ไอเทมสวมใส่ภายนอก')
             .setColor('Blue')
             .addFields(
                 {
                     name: '┏ 📿 เครื่องประดับ',
-                    value: (await this.EquipPositionFinder(EquipPos.ItemDecoration, 5)).join('\n')
+                    value: ItemDecoration.join('\n')
                 },
                 {
                     name: '┏ 💠 ตราสัญลักษณ์',
-                    value: (await this.EquipPositionFinder(EquipPos.Emblem, 7)).join('\n')
+                    value: Emblem.join('\n')
                 },
                 {
                     name: '┏ 🥼 ชุดสวมใส่',
-                    value: (await this.EquipPositionFinder(EquipPos.Armor, 3)).join('\n')
+                    value: Armor.join('\n')
                 },
                 {
                     name: '┏  🦋 ปีกบิน',
-                    value: (await this.EquipPositionFinder(EquipPos.Wing, 4)).join('\n')
+                    value: Wing.join('\n')
                 },
                 {
                     name: '┏ ⚔️ อาวุธหลัก',
-                    value: (await this.EquipPositionFinder(EquipPos.MainWeapon, 4)).join('\n')
+                    value: MainWeapon.join('\n')
                 },
             )
 
-        this.SelectRemove.addOptions(
+        if (ItemDecoration.length > 2) this.SelectRemove.addOptions(
             {
                 label: '📿 เลือกไอเทมเครื่องประดับที่ต้องการถอด',
                 value: EquipPos.ItemDecoration.type
-            },
+            }
+        )
+
+        if (Emblem.length > 2) this.SelectRemove.addOptions(
             {
                 label: '💠 เลือกไอเทมตราสัญลักษณ์ที่ต้องการถอด',
                 value: EquipPos.Emblem.type
-            },
+            }
+        )
+
+        if (Armor.length > 2) this.SelectRemove.addOptions(
             {
                 label: '🥼 เลือกไอเทมชุดสวมใส่ที่ต้องการถอด',
                 value: EquipPos.Armor.type
-            },
+            }
+        )
+
+        if (Wing.length > 2) this.SelectRemove.addOptions(
             {
                 label: '🦋 เลือกไอเทมปีกบินที่ต้องการถอด',
                 value: EquipPos.Wing.type
-            },
+            }
+        )
+
+        if (MainWeapon.length > 2) this.SelectRemove.addOptions(
             {
                 label: '⚔️ เลือกไอเทมอาวุธหลักที่ต้องการถอด',
                 value: EquipPos.MainWeapon.type

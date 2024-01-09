@@ -28,7 +28,6 @@ export default async ({ client, Member, ItemTarget, interaction, Target, AcceptC
     const Item = await client.Database.Items(ItemTarget.ItemId) as TypeAB
 
     if (Target) {
-        if (Target.id == Member.id) return { isEnd: false, message: { embeds: [ErrorEmbeds.ActionSelf()] } }
         if (Member.voice.channel !== Target.voice.channel) return { isEnd: false, message: { embeds: [ErrorEmbeds.ChannelNotMatch(Target.user.id)] } }
     }
 
@@ -51,7 +50,7 @@ export default async ({ client, Member, ItemTarget, interaction, Target, AcceptC
 
         if (ConditionTarget.isEnd) return ConditionTarget
 
-        const { IQ, AttHP, AttMP } = await client.Executer.Attack(Member.guild, User, Item.Extend.Activate, target, ItemTarget.Quality)
+        const { IQ, AttHP, AttMP } = await client.Executer.Attack(Member.guild, User, Item.Extend.Activate, target, ItemTarget.Quality, Item.Extend.ConditionTarget)
 
         AttackMessage(AttHP, AttMP, Target)
 

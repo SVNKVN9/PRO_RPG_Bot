@@ -1,6 +1,5 @@
-import { CommandInteraction, InteractionReplyOptions, SlashCommandBuilder } from "discord.js";
+import { CommandInteraction, SlashCommandBuilder } from "discord.js";
 import Client from "../../structure/Client";
-// import { InfoExecute } from "../../Utils/Info";
 
 export default {
     data: [

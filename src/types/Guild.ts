@@ -1,11 +1,14 @@
 export interface IGuild {
     id: string
-    prefix: string
-    slashcommand: boolean
+    name: string
+    iconURL: string
     TxActivate: boolean
-    TxValue: string
+    TxValue: number
     Trade: boolean
-    Attack: boolean
+    isVs: boolean
+    isAttack: boolean
     KickWhenDie: boolean
+    Timeout: boolean 
+    KickWhenJoin: boolean
     KickWhenMove: boolean
 }

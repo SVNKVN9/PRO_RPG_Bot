@@ -1,13 +1,14 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Collection, EmbedBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, codeBlock } from "discord.js"
 import Client from "../../structure/Client"
-import { ILevel, IUser, ItemBase, ItemsType } from "../../types"
-import { Inventory } from "./Makedata"
+import { ICooldown, ILevel, IUser, ItemBase, ItemsType } from "../../types"
 import Calculator from "../../Utils/Calculator"
 import { NumberWithCommas, msToDHMS } from "../../Utils/Function"
 import { InventoryBuild } from "../../Utils/Components"
 
 interface Group {
-    Id: string, Index: string, Name: string
+    Id: string,
+    Index: string,
+    Name: string
 }
 
 export const GroupsPage = async (client: Client, UserId: string, pageNo: number): Promise<{ embeds: EmbedBuilder[], components: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] }> => {
@@ -138,28 +139,40 @@ export const GroupsPage = async (client: Client, UserId: string, pageNo: number)
     }
 }
 
-export const ItemsList = async (client: Client, groups: Inventory[], groupNo: number, pageNo: number, UserId: string) => {
-    // let GroupsFetch = await client.Database.Inventorys.aggregate([
-    //     { $match: { UserId } },
-    //     { $group: { _id: "$ItemId", count: { $count: {} } } },
-    //     { $lookup: { from: "items", localField: "_id", foreignField: "Base.ItemId", as: "Item" } },
-    //     { $lookup: { from: 'groups', localField: 'Item.groupId', foreignField: 'Id', as: 'Group' } }
-    // ]).toArray() as {
-    //     _id: string,
-    //     count: number,
-    //     Item: ItemsType[]
-    //     Group: Group[]
-    // }[]
+export const ItemsList = async (client: Client, groupNo: number, pageNo: number, UserId: string) => {
+    const Items = await client.Database.Inventorys.aggregate([
+        {
+            $match: {
+                $or: [
+                    { UserId, Select: false },
+                    {
+                        UserId, Select: { $exists: false }
+                    }
+                ]
+            }
+        },
+        { $group: { _id: "$ItemId", count: { $sum: 1 } } },
+        { $lookup: { from: "items", localField: "_id", foreignField: "Base.ItemId", as: "Item" } },
+        { $lookup: { from: "groups", localField: "Item.groupId", foreignField: "Id", as: "Group" } },
+        {
+            $match: {
+                $or: [
+                    { "Group.Index": `${groupNo}` },
+                    { "Group.Index": groupNo }
+                ]
+            }
+        },
+        { $sort: { _id: 1 } }
+    ]).toArray() as {
+        _id: string,
+        count: number,
+        Item: ItemsType[]
+        Group: Group[]
+    }[]
 
-    const Group = groups.find((group) => group.Index == groupNo) as Inventory
+    const TotalCount = Items.reduce((total, item) => total + item.count, 0)
 
-    // const ItemCounts = Groups.reduce((p, c) => c.count + p, 0)
-
-    let ItemCounts = 0
-
-    for (let item of Group.Items.values()) {
-        ItemCounts = ItemCounts + item.length
-    }
+    const GroupName = Items[0].Group[0].Name
 
     let pages: {
         embed: EmbedBuilder,
@@ -167,17 +180,17 @@ export const ItemsList = async (client: Client, groups: Inventory[], groupNo: nu
         use: StringSelectMenuBuilder,
         toSelect: StringSelectMenuBuilder
     }[] = []
+
     let round = 0
 
-    Group.Items = new Map([...Group.Items].sort())
-    const cooldowns = await client.Database.Cooldowns.find({ UserId }).toArray() as any as { UserId: string, ItemId: string, TimeOut: number }[]
+    const cooldowns = await client.Database.Cooldowns.find({ UserId }).toArray() as any as ICooldown[]
     const now = Date.now()
 
-    for (let item of Group.Items.values()) {
+    for (let Item of Items) {
         if ((round % 10) == 0) {
             pages.push({
                 embed: new EmbedBuilder()
-                    .setTitle(`${groupNo}．${Group.Name}\`〔จำนวนรวม ${ItemCounts}〕\``),
+                    .setTitle(`${groupNo}．${GroupName}\`〔จำนวนรวม ${TotalCount}〕\``),
                 selection: new StringSelectMenuBuilder()
                     .setCustomId('ItemDetail')
                     .setPlaceholder('👀เลือกชนิดไอเทมที่ต้องการเปิด'),
@@ -192,12 +205,12 @@ export const ItemsList = async (client: Client, groups: Inventory[], groupNo: nu
 
         round += 1
 
-        const cooldown = cooldowns.find((cooldown) => cooldown.ItemId == item.data.Base.ItemId)
+        const cooldown = cooldowns.find((cooldown) => cooldown.ItemId == Item._id)
 
-        const defaultObject = { label: `${round}. ${item.data.Base.ItemId} ${item.data.Base.ItemName}`, value: `${item.data.Base.ItemId}` }
+        const defaultObject = { label: `${round}. ${Item.Item[0].Base.ItemId} ${Item.Item[0].Base.ItemName}`, value: `${Item.Item[0].Base.ItemId}` }
 
         pages[pages.length - 1].embed.addFields({
-            name: `${round}． ${item.data.Base.ItemId} ${item.data.Base.EmojiId ? item.data.Base.EmojiId : ''} ${item.data.Base.ItemName} \`(จำนวน ${item.length})\``,
+            name: `${round}． ${Item.Item[0].Base.ItemId} ${Item.Item[0].Base.EmojiId ?? ''} ${Item.Item[0].Base.ItemName} \`(จำนวน ${Item.count})\``,
             value: `╰${cooldown && cooldown.TimeOut > now ? `⌛${msToDHMS(cooldown.TimeOut - now)}` : '✅ พร้อมใช้'}`
         })
         pages[pages.length - 1].selection.addOptions(defaultObject)
@@ -208,7 +221,7 @@ export const ItemsList = async (client: Client, groups: Inventory[], groupNo: nu
     if (!pages.length) {
         pages.push({
             embed: new EmbedBuilder()
-                .setTitle(`${groupNo}．${Group.Name}\`〔จำนวนรวม ${ItemCounts}〕\``),
+                .setTitle(`${groupNo}．${GroupName}\`〔จำนวนรวม ${TotalCount}〕\``),
             selection: new StringSelectMenuBuilder()
                 .setCustomId('ItemDetail')
                 .setPlaceholder('👀เลือกชนิดไอเทมที่ต้องการเปิด')
